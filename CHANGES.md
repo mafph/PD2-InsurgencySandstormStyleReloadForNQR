@@ -68,12 +68,17 @@ Vergleich: **Vorher** = alter Stand (dieses Repo, `8639308` + Zwischenstände) v
 - Sound-Beschreibung: „wenn ein Magazin voll ist".
 
 ### main.lua / save.lua
-- **`save` aus dem Ladepfad entfernt** — die Savegame-Sicherung der
-  Magazin-Queue ist damit deaktiviert (`save.lua` wird nicht mehr geladen,
-  `install_save_hooks` wird nicht mehr aufgerufen).
+- **`save.lua` komplett entfernt** — Datei gelöscht und aus dem Ladepfad
+  (`PARTS`) genommen. Die Savegame-Sicherung der Magazin-Queue gibt es nicht mehr.
+
+## Repo / Arbeitsweise
+- **Git lebt jetzt im Install-Ordner** (`mods\nqr_mags\.git`). History migriert
+  (Commits `421a3b5` v1, `9de867b` v1.1, Präfix `nqr_mags/` gestrippt).
+- Dev-Kopie (`Default Project\nqr_mags`) ist nur noch ein Spiegel — Änderungen
+  immer direkt an install, dann Dev ← install spiegeln.
+- `lua/day_reset.lua` wird pro Level über den `gamesetup`-Hook in mod.txt geladen
+  (Magazin-Lager + liegende Magazine zurücksetzen).
 
 ## Offene Punkte / Aufräumen
-- **Dev-Ordner (`Default Project\nqr_mags\lua`) ist veraltet** — er enthält noch
-  die alte Version. Kopie aus dem Install-Ordner ist die Quelle für den nächsten Commit.
-- `save.lua` existiert noch, wird aber nicht geladen (Ladung beibehalten oder löschen?).
-- `lua/day_reset.lua` im Install-Ordner gehört nicht zu diesem Mod (nie geladen).
+- Dev-Kopie enthält noch ungetrackte Duplikate auf `nqr_mags/`-Root
+  (`hooks_player.lua` etc.) — nicht vorhanden an install, löschwürdig.
