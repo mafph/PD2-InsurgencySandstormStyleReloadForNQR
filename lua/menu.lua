@@ -119,20 +119,20 @@ local FILL_ITEMS = {
 	{
 		type = "slider",
 		id = "nqr_magfill_interval",
-		title = "NQR Refill: Sekunden pro Magazin",
-		desc = "Pause zwischen zwei Magazinen waehrend der Nachfuell-Animation.",
+		title = "NQR Refill: Sekunden pro Patrone",
+		desc = "Pause zwischen zwei Patronen, die ins Magazin gefuellt werden. Nur bei weggesteckter Waffe.",
 		callback = "nqr_magfill_interval_callback",
-		data_key = "mag_interval",
-		min = 0.1,
-		max = 3,
-		step = 0.05,
+		data_key = "round_interval",
+		min = 0.02,
+		max = 1,
+		step = 0.01,
 		precision = 2
 	},
 	{
 		type = "toggle",
 		id = "nqr_magfill_sound",
 		title = "NQR Refill: Sound",
-		desc = "Spielt beim Fuellen eines Magazins einen Sound ab.",
+		desc = "Spielt einen Sound ab, wenn ein Magazin voll ist.",
 		callback = "nqr_magfill_sound_callback",
 		data_key = "sound"
 	},

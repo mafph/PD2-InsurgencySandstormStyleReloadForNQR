@@ -24,19 +24,32 @@ local function make_on_reload_hook(orig)
 
 		self._nqr_drop_count = 0
 
-		if drops < 1 then
-			local ret = orig(self, ...)
-
-			api.sync_total(self)
-
-			dbg("reload without magdrop, queue stays " .. tostring(#queue))
-
-			return ret
-		end
-
 		local chamber = api.chamber_of(self)
 		local clip = self:get_ammo_remaining_in_clip()
 		local kept = math.max(0, math.min(chamber, clip))
+
+		dbg("reload: clip=" .. tostring(clip) .. " chamber=" .. tostring(chamber) .. " drops=" .. tostring(drops)
+			.. " loose=" .. tostring(api.loose_of(self)) .. " queue=" .. tostring(#queue))
+
+		if drops < 1 then
+			local old_mag = self._nqr_mag_installed
+			local actual = math.max(0, clip - chamber)
+
+			if not old_mag then
+				old_mag = api.new_mag(actual)
+				dbg("reload: no installed mag recorded, created rounds=" .. tostring(actual))
+			else
+				-- .rounds wird nur beim Einsetzen/HUD aktualisiert: nach Schuessen ist der Wert veraltet.
+				if (old_mag.rounds or 0) ~= actual then
+					dbg("reload: stale mag rounds " .. tostring(old_mag.rounds) .. " -> " .. tostring(actual)
+						.. " (clip=" .. tostring(clip) .. " chamber=" .. tostring(chamber) .. ")")
+				end
+
+				old_mag.rounds = actual
+			end
+
+			queue[#queue + 1] = old_mag
+		end
 
 		api.sort_queue(queue)
 
@@ -50,9 +63,11 @@ local function make_on_reload_hook(orig)
 
 		local ret = orig(self, ...)
 
-		self._nqr_mag_installed.rounds = self:get_ammo_remaining_in_clip()
+		self._nqr_mag_installed.rounds = math.max(0, self:get_ammo_remaining_in_clip() - chamber)
 
 		api.sync_total(self)
+
+		cfg.panel_dirty = true
 
 		dbg("loaded " .. tostring(self._nqr_mag_installed.rounds) .. "/" .. tostring(capacity + chamber)
 			.. " chamber=" .. tostring(chamber) .. " queue=" .. tostring(#queue)
@@ -84,6 +99,8 @@ local function make_drop_hook(orig)
 					local col_unit = entry[2]
 
 					if alive(col_unit) then
+						col_unit:set_scale(Vector3(3, 3, 3))
+
 						api.dropped[col_unit:key()] = {
 							key = col_unit:key(),
 							col = col_unit,
@@ -96,6 +113,8 @@ local function make_drop_hook(orig)
 						}
 
 						self._nqr_drop_count = (self._nqr_drop_count or 0) + 1
+
+						cfg.panel_dirty = true
 
 						dbg("dropped mag rounds=" .. tostring(rounds) .. " key=" .. tostring(key))
 					end
@@ -180,6 +199,19 @@ local function ensure_add_ammo_hook()
 			return false, 0
 		end
 
+		-- Obergrenze ist ammo_max der Waffe (wird in hooks_player gesetzt)
+		local room = math.max(0, self:get_ammo_max() - self:get_ammo_total())
+
+		if add_amount > room then
+			dbg("loot " .. tostring(add_amount) .. " capped to " .. tostring(room) .. " (ammo_max " .. tostring(self:get_ammo_max()) .. ")")
+			add_amount = room
+		end
+
+		if add_amount <= 0 then
+			api.sync_total(self)
+			return false, 0
+		end
+
 		api.set_loose(self, api.loose_of(self) + add_amount)
 		api.sync_total(self)
 		cfg.panel_dirty = true
@@ -206,6 +238,8 @@ local function ensure_bag_hooks()
 			return orig_add_ammo_from_bag(self, available, special)
 		end
 
+		api.sync_total(self)
+
 		local before = self:get_ammo_total()
 		local ret = orig_add_ammo_from_bag(self, available, special)
 		local added = self:get_ammo_total() - before
@@ -225,26 +259,31 @@ local function ensure_bag_hooks()
 	cls.add_ammo_from_bag = hook
 end
 
-local function ensure_interaction_hooks()
-	local cls = rawget(_G, "AmmoBagInteractionExt")
+local function ensure_need_ammo_hook()
+	local cls = rawget(_G, "PlayerInventory")
 
-	if not cls or not cls._interact_blocked then return end
-	if cls._interact_blocked == rcfg.interaction_hook then return end
+	if not cls or not cls.need_ammo then return end
+	if cls.need_ammo == rcfg.need_ammo_hook then return end
 
-	local orig_blocked = cls._interact_blocked
+	local orig = cls.need_ammo
 
-	local function hook(self, player)
-		local blocked, hint, custom = orig_blocked(self, player)
-
-		if rcfg.enabled and rcfg.unblock_bag and blocked and api.magazines_need_fill(player) then
-			return false, hint, custom
+	rcfg.need_ammo_hook = function(self)
+		if orig(self) then
+			return true
 		end
 
-		return blocked, hint, custom
+		if rcfg.enabled and rcfg.unblock_bag then
+			local player = managers.player and managers.player:player_unit()
+
+			if player and player:inventory() == self and api.magazines_need_fill(player) then
+				return true
+			end
+		end
+
+		return false
 	end
 
-	rcfg.interaction_hook = hook
-	cls._interact_blocked = hook
+	cls.need_ammo = rcfg.need_ammo_hook
 end
 
 local function install_weapon_hooks()
@@ -253,13 +292,13 @@ local function install_weapon_hooks()
 	ensure_add_ammo_hook()
 	ensure_drop_hook()
 	ensure_bag_hooks()
-	ensure_interaction_hooks()
+	ensure_need_ammo_hook()
 end
 
 cfg.api.ensure_on_reload_hook = ensure_on_reload_hook
 cfg.api.ensure_add_ammo_hook = ensure_add_ammo_hook
 cfg.api.ensure_drop_hook = ensure_drop_hook
 cfg.api.ensure_bag_hooks = ensure_bag_hooks
-cfg.api.ensure_interaction_hooks = ensure_interaction_hooks
+cfg.api.ensure_need_ammo_hook = ensure_need_ammo_hook
 
 install_weapon_hooks()

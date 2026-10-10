@@ -16,7 +16,6 @@ local PARTS = {
 	"hud",
 	"hooks_weapon",
 	"hooks_player",
-	"save",
 	"menu"
 }
 

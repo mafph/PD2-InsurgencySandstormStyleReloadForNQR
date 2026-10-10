@@ -8,6 +8,7 @@
 
 	"hooks" : [
 		{"hook_id":"lib/managers/menumanager","script_path":"lua/main.lua"},
-		{"hook_id":"lib/units/beings/player/states/playerstandard","script_path":"lua/main.lua"}
+		{"hook_id":"lib/units/beings/player/states/playerstandard","script_path":"lua/main.lua"},
+		{"hook_id":"lib/setups/gamesetup","script_path":"lua/day_reset.lua"}
 	]
 }

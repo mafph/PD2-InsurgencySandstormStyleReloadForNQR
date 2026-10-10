@@ -48,7 +48,7 @@ local MAGS_SETTINGS_KEYS = {
 
 local FILL_SETTINGS_KEYS = {
 	enabled = true,
-	mag_interval = true,
+	round_interval = true,
 	sound = true,
 	unblock_bag = true,
 	debug = true
@@ -115,6 +115,7 @@ end
 
 cfg.enabled = cfg.enabled ~= false
 cfg.max_extra_mags = cfg.max_extra_mags or 0
+cfg.total_factor = cfg.total_factor or 1.5
 cfg.max_boxes = cfg.max_boxes or 14
 cfg.show_counts = cfg.show_counts ~= false
 cfg.show_ammo_type = cfg.show_ammo_type ~= false
@@ -129,7 +130,7 @@ cfg.mags = cfg.mags or {}
 cfg.dropped = cfg.dropped or {}
 
 rcfg.enabled = rcfg.enabled ~= false
-rcfg.mag_interval = rcfg.mag_interval or 0.9
+rcfg.round_interval = rcfg.round_interval or 0.1
 rcfg.sound = rcfg.sound ~= false
 rcfg.unblock_bag = rcfg.unblock_bag ~= false
 rcfg.debug = rcfg.debug or false
@@ -325,6 +326,19 @@ sync_total = function(wep)
 	wep:set_ammo_total(wep:get_ammo_remaining_in_clip() + loose_of(wep) + queue_rounds(wep))
 end
 
+-- Wert fuer ammo_max der Waffe: total_factor mal Startmenge (volles Magazin + Rebalance-Magazinanzahl * Magazingroesse).
+local function max_total(wep)
+	local pid = mag_part_id(wep)
+	local caliber = wep._caliber
+
+	if not pid or not caliber then return nil end
+
+	local capacity = mag_capacity(pid, caliber)
+	local base = capacity + chamber_of(wep) + nqr_mag_amount(wep) * capacity
+
+	return math.floor(base * math.max(1, cfg.total_factor or 1.5))
+end
+
 local function skip_weapon(wep)
 	if not cfg.enabled then return true end
 	if not is_ours(wep) then return true end
@@ -407,7 +421,8 @@ local function add_to_job(wep)
 	rdbg("queued " .. tostring(wep._name_id) .. " for refill")
 end
 
-local function fill_one_mag()
+-- Fuellt pro Aufruf genau eine Patrone aus den losen Patronen ins naechste nicht volle Magazin.
+local function fill_one_round()
 	local job = rcfg.job
 
 	if not job then return end
@@ -423,7 +438,7 @@ local function fill_one_mag()
 	end
 
 	if job.index > #job.list then
-		rdbg("refill done, mags filled=" .. tostring(job.filled))
+		rdbg("refill done, rounds filled=" .. tostring(job.filled))
 		rcfg.job = nil
 		return
 	end
@@ -431,12 +446,11 @@ local function fill_one_mag()
 	local wep = job.list[job.index]
 	local queue, _, _, _, capacity = queue_of(wep)
 
-	if not queue or not capacity then
+	if not queue or not capacity or loose_of(wep) <= 0 then
 		job.index = job.index + 1
 		return
 	end
 
-	local loose = loose_of(wep)
 	local target = nil
 
 	for i = 1, #queue do
@@ -446,39 +460,33 @@ local function fill_one_mag()
 		end
 	end
 
-	if loose <= 0 then
-		job.index = job.index + 1
-		return
-	end
-
 	if not target then
 		job.index = job.index + 1
 		return
 	end
 
-	local take = math.min(capacity - target.rounds, loose)
+	target.rounds = (target.rounds or 0) + 1
 
-	target.rounds = (target.rounds or 0) + take
-
-	set_loose(wep, loose - take)
+	set_loose(wep, loose_of(wep) - 1)
 	sync_total(wep)
 	sort_queue(queue)
 
 	job.filled = job.filled + 1
 
-	if rcfg.sound then
-		local unit = managers.player and managers.player:player_unit()
-
-		if unit and unit.sound then
-			pcall(function() unit:sound():play("pickup_ammo") end)
-		end
-	end
-
 	refresh_hud()
 	cfg.panel_dirty = true
 
-	rdbg("filled mag to " .. tostring(target.rounds) .. "/" .. tostring(capacity)
-		.. " loose=" .. tostring(loose - take) .. " total=" .. tostring(job.filled))
+	if target.rounds >= capacity then
+		rdbg("mag full " .. tostring(capacity) .. " loose=" .. tostring(loose_of(wep)) .. " rounds=" .. tostring(job.filled))
+
+		if rcfg.sound then
+			local unit = managers.player and managers.player:player_unit()
+
+			if unit and unit.sound then
+				pcall(function() unit:sound():play("pickup_ammo") end)
+			end
+		end
+	end
 end
 
 local function tick(dt)
@@ -489,17 +497,31 @@ local function tick(dt)
 	if not job then return end
 
 	if job.index > #job.list then
-		rdbg("refill done, mags filled=" .. tostring(job.filled))
+		rdbg("refill done, rounds filled=" .. tostring(job.filled))
 		rcfg.job = nil
 		return
 	end
 
 	job.t = job.t + (dt or 0)
 
-	if job.t < rcfg.mag_interval then return end
+	if job.t < rcfg.round_interval then return end
 
 	job.t = 0
-	fill_one_mag()
+	fill_one_round()
+end
+
+local function needs_fill(wep)
+	if not wep or skip_weapon(wep) then return false end
+
+	local queue, _, _, _, capacity = queue_of(wep)
+
+	if not queue or not capacity then return false end
+
+	for i = 1, #queue do
+		if capacity - (queue[i].rounds or 0) > 0 then return true end
+	end
+
+	return false
 end
 
 local function magazines_need_fill(player)
@@ -515,9 +537,7 @@ local function magazines_need_fill(player)
 			local queue, _, _, _, capacity = queue_of(wep)
 
 			if queue and capacity then
-				local full = full_capacity(wep) or capacity
-
-				if wep._nqr_mag_installed and (wep._nqr_mag_installed.rounds or 0) < full then
+				if wep._nqr_mag_installed and (wep._nqr_mag_installed.rounds or 0) < capacity then
 					return true
 				end
 
@@ -536,11 +556,10 @@ end
 cfg.api = cfg.api or {}
 
 cfg.api.loose_of = loose_of
+cfg.api.max_total = max_total
 cfg.api.set_loose = set_loose
 cfg.api.sync_total = sync_total
 cfg.api.queue_of = queue_of
-cfg.api.capacity_of = mag_capacity
-cfg.api.full_of = full_capacity
 cfg.api.sort_queue = sort_queue
 cfg.api.skip_weapon = skip_weapon
 cfg.api.new_mag = new_mag
@@ -554,6 +573,7 @@ cfg.api.pickup_dropped = pickup_dropped
 cfg.api.add_to_job = add_to_job
 cfg.api.tick = tick
 cfg.api.magazines_need_fill = magazines_need_fill
+cfg.api.needs_fill = needs_fill
 cfg.api.save = function() save_settings(cfg, "nqr_mags_settings.txt", MAGS_SETTINGS_KEYS, dbg) end
 cfg.api.log = dbg
 

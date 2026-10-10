@@ -22,14 +22,14 @@ local function panel_rows()
 
 	local installed = wep._nqr_mag_installed or api.new_mag(0)
 
-	installed.rounds = wep:get_ammo_remaining_in_clip()
+	installed.rounds = math.max(0, wep:get_ammo_remaining_in_clip() - api.chamber_of(wep))
 
 	return {
 		queue = queue,
 		key = key,
 		caliber = caliber,
 		capacity = capacity,
-		full = capacity + api.chamber_of(wep),
+		full = capacity,
 		installed = installed,
 		loose = api.loose_of(wep)
 	}

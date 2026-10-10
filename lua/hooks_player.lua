@@ -24,13 +24,43 @@ local function tap_hold_time()
 	return 0.2
 end
 
+-- Waffe wegstecken (fuer Pickup und Refill). cfg.holster = Grund, solange die Waffe unten bleiben soll.
+local function holster_start(state, t, reason)
+	if cfg.holster == reason then return true end
+	if cfg.holster then return false end
+	if state:_changing_weapon() then return false end
+
+	local pl = managers.player and managers.player:player_unit()
+	local inv = pl and pl:inventory()
+
+	if not inv or not inv.equipped_selection then return false end
+
+	cfg.holster = reason
+	state:_start_action_unequip_weapon(t, { selection_wanted = inv:equipped_selection() })
+
+	return true
+end
+
+local function holster_release(reason)
+	if cfg.holster == reason then
+		cfg.holster = nil
+	end
+end
+
+-- Waffe ist ganz weg, wenn die Unequip-Zeit abgelaufen ist (der Timer wird vom Hook angehalten).
+local function holstered(state, t)
+	local expire = state._unequip_weapon_expire_t
+
+	return cfg.holster ~= nil and expire ~= nil and t >= expire
+end
+
 local function make_reload_hook(orig)
 	local function hook(self, t, input)
 		if not cfg.enabled then
-			if cfg.tap_pending or cfg.panel_visible then
-				cfg.tap_t = nil
-				cfg.tap_pending = false
-				cfg.tap_confirmed = false
+			self._nqr_hold_t = nil
+			holster_release("refill")
+
+			if cfg.panel_visible then
 				api.set_panel(false)
 			end
 
@@ -38,58 +68,43 @@ local function make_reload_hook(orig)
 		end
 
 		local held = reload_held(self)
+		local wep = api.equipped_base()
+		local applicable = wep and not api.skip_weapon(wep)
 
-		if held then
-			if input and input.btn_reload_press and self._magdrop_t and (t <= self._magdrop_t) and not self._magdrop_first_press then
-				cfg.tap_t = nil
-				cfg.tap_pending = false
-				cfg.tap_confirmed = false
-				api.set_panel(false)
-
-				return orig(self, t, input)
+		if held and applicable then
+			if not self._nqr_hold_t then
+				self._nqr_hold_t = t + tap_hold_time()
 			end
 
-			if not cfg.tap_t then
-				cfg.tap_t = t
-				cfg.tap_confirmed = false
-				cfg.tap_pending = true
-			end
-
-			if not cfg.tap_confirmed and (t - cfg.tap_t) >= tap_hold_time() then
-				cfg.tap_confirmed = true
-			end
-
-			if cfg.tap_confirmed then
+			if t >= self._nqr_hold_t then
 				api.set_panel(true)
-				self._magdrop_t = nil
-				self._magdrop_first_press = nil
 
-				local wep = api.equipped_base()
-
-				if wep and api.loose_of(wep) > 0 then
-					api.add_to_job(wep)
+				-- Refill nur bei weggesteckter Waffe
+				if api.loose_of(wep) > 0 and api.needs_fill(wep) then
+					if holster_start(self, t, "refill") and holstered(self, t) then
+						api.add_to_job(wep)
+					end
+				else
+					holster_release("refill")
 				end
 			end
 
 			return false
 		end
 
-		if cfg.tap_pending then
-			local tap_age = cfg.tap_t and (t - cfg.tap_t) or 999
-			local short_press = not cfg.tap_confirmed and tap_age <= 1
+		holster_release("refill")
 
-			cfg.tap_t = nil
-			cfg.tap_pending = false
-			cfg.tap_confirmed = false
+		local tap = self._nqr_hold_t ~= nil and not cfg.panel_visible
 
-			if short_press then
-				api.set_panel(false)
+		self._nqr_hold_t = nil
 
-				return orig(self, t, { btn_reload_press = true })
-			end
+		if cfg.panel_visible then
+			api.set_panel(false)
 		end
 
-		api.set_panel(false)
+		if tap then
+			return orig(self, t, { btn_reload_press = true })
+		end
 
 		return orig(self, t, input)
 	end
@@ -116,32 +131,50 @@ local mvec_dir = Vector3()
 local mvec_v = Vector3()
 local mvec_closest = Vector3()
 
+local function bar_stop(complete)
+	holster_release("pickup")
+
+	if cfg.pickup_bar then
+		cfg.pickup_bar = nil
+		pcall(function() managers.hud:hide_interaction_bar(complete and true or false) end)
+	end
+end
+
 local function clear_pickup()
+	bar_stop(false)
 	if cfg.pickup_shown then
 		cfg.pickup_shown = nil
-
-		pcall(function()
-			managers.hud:hide_interaction_bar(false)
-			managers.hud:remove_interact()
-		end)
+		pcall(function() managers.hud:remove_interact() end)
 	end
-
 	cfg.pickup_tag = nil
 	cfg.pickup_t = nil
 end
 
-local function prune_dropped()
-	local dropped = api.dropped
+local function ensure_holster_hook()
+	local PS = rawget(_G, "PlayerStandard")
 
-	for k, tag in pairs(dropped) do
-		if not alive(tag.col) then
-			dropped[k] = nil
+	if not PS or not PS._update_equip_weapon_timers then return end
+	if PS._update_equip_weapon_timers == cfg.equip_timer_hook then return end
+
+	local orig = PS._update_equip_weapon_timers
+
+	cfg.equip_timer_hook = function(self, t, input)
+		if cfg.holster and self._unequip_weapon_expire_t then
+			return -- Waffe bleibt unequipped, solange gepickt/aufgefuellt wird
 		end
+
+		return orig(self, t, input)
 	end
+
+	PS._update_equip_weapon_timers = cfg.equip_timer_hook
 end
 
-local function update_pickup(state, t)
-	prune_dropped()
+local function update_pickup(state, t, input)
+	for k, tag in pairs(api.dropped) do
+		if not alive(tag.col) then
+			api.dropped[k] = nil
+		end
+	end
 
 	if not cfg.enabled then
 		clear_pickup()
@@ -204,14 +237,8 @@ local function update_pickup(state, t)
 		return
 	end
 
-	if state._interacting and state:_interacting() then
-		clear_pickup()
-		return
-	end
-
 	if cfg.pickup_tag ~= tag then
 		cfg.pickup_tag = tag
-		cfg.pickup_t = t
 		cfg.pickup_shown = true
 
 		pcall(function()
@@ -219,31 +246,37 @@ local function update_pickup(state, t)
 				text = managers.localization:btn_macro("interact", false) .. " Magazin aufheben"
 			})
 		end)
+	end
 
+	local ctrl = state._controller
+	local held = ctrl and ctrl.get_input_bool and ctrl:get_input_bool("interact")
+
+	if not held then
+		if cfg.pickup_t or cfg.holster == "pickup" then
+			bar_stop(false)
+			cfg.pickup_t = nil
+			cfg.pickup_tag = nil -- Prompt wird im naechsten Frame neu gezeigt
+		end
 		return
 	end
 
-	local controller = state._controller
+	if not cfg.pickup_t then
+		-- Erst Waffe wegstecken, der Balken startet erst, wenn sie ganz unten ist.
+		if not holster_start(state, t, "pickup") or not holstered(state, t) then return end
 
-	if not controller or not controller.get_input_bool or not controller:get_input_bool("interact") then
-		clear_pickup()
-		return
+		cfg.pickup_t = t
+		cfg.pickup_bar = true
+		managers.hud:show_interaction_bar(0, PICKUP_HOLD)
 	end
 
 	local progress = math.min(1, (t - cfg.pickup_t) / PICKUP_HOLD)
-
-	pcall(function()
-		managers.hud:show_interaction_bar(progress, 1)
-	end)
+	managers.hud:set_interaction_bar_width(progress * PICKUP_HOLD, PICKUP_HOLD)
 
 	if progress < 1 then return end
 
 	local ok = api.pickup_dropped(tag)
-
-	pcall(function()
-		managers.hud:hide_interaction_bar(ok and true or false)
-		managers.hud:remove_interact()
-	end)
+	bar_stop(ok)
+	pcall(function() managers.hud:remove_interact() end)
 
 	if ok then
 		if alive(tag.col) then tag.col:set_slot(0) end
@@ -321,6 +354,7 @@ local function install_gameplay_hooks()
 
 	cfg.gameplay_installed = true
 
+	ensure_holster_hook()
 	ensure_reload_hook()
 	api.ensure_on_reload_hook()
 	api.ensure_add_ammo_hook()
@@ -333,9 +367,8 @@ local function install_gameplay_hooks()
 		api.ensure_add_ammo_hook()
 		api.ensure_drop_hook()
 		ensure_hud_hook()
-		api.install_save_hooks()
 		api.ensure_bag_hooks()
-		api.ensure_interaction_hooks()
+		api.ensure_need_ammo_hook()
 
 		local base = api.equipped_base()
 
@@ -344,15 +377,44 @@ local function install_gameplay_hooks()
 			api.refresh_hud()
 		end
 
+		if base and not api.skip_weapon(base) and base.set_ammo_max then
+			local want = api.max_total(base)
+
+			if want and base:get_ammo_max() ~= want then
+				api.log("ammo_max " .. tostring(base:get_ammo_max()) .. " -> " .. tostring(want) .. " on " .. tostring(base._name_id))
+				base:set_ammo_max(want)
+			end
+		end
+
+		local input = orig_get_input(self, t, dt, paused)
+
+		if cfg.holster == "refill" and not reload_held(self) then
+			holster_release("refill")
+		end
+
 		if paused then
 			clear_pickup()
 		else
-			update_pickup(self, t)
+			update_pickup(self, t, input)
 		end
 
 		if not paused and cfg.panel_visible and (not rcfg.last_tick_t or rcfg.last_tick_t ~= t) then
 			rcfg.last_tick_t = t
-			api.tick(dt)
+
+			if cfg.holster == "refill" and holstered(self, t) then
+				api.tick(dt)
+			end
+
+			local base = api.equipped_base()
+
+			if base and not api.skip_weapon(base) then
+				local clip = base:get_ammo_remaining_in_clip()
+
+				if clip ~= cfg.last_clip then
+					cfg.last_clip = clip
+					cfg.panel_dirty = true
+				end
+			end
 
 			if cfg.panel_dirty then
 				cfg.panel_dirty = false
@@ -360,7 +422,7 @@ local function install_gameplay_hooks()
 			end
 		end
 
-		return orig_get_input(self, t, dt, paused)
+		return input
 	end
 end
 
