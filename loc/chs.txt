@@ -11,6 +11,9 @@
 	"nqr_mags_ammo_max_title" : "最大弹药",
 	"nqr_mags_ammo_max_desc" : "最大弹药量，为初始量的百分比（100-200%）。",
 
+	"nqr_mags_overlay_always_title" : "始终显示弹匣面板",
+	"nqr_mags_overlay_always_desc" : "持续显示弹匣面板，而不是仅在按住换弹键时显示。",
+
 	"nqr_mags_counts_title" : "显示弹匣数",
 	"nqr_mags_counts_desc" : "在顶部显示你拥有的弹匣数量。",
 

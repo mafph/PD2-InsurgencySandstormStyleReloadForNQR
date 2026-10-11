@@ -11,6 +11,9 @@
 	"nqr_mags_ammo_max_title" : "Maximale Munition",
 	"nqr_mags_ammo_max_desc" : "Maximale Munition als Prozentsatz der Startmenge (100-200%).",
 
+	"nqr_mags_overlay_always_title" : "Overlay dauerhaft offen",
+	"nqr_mags_overlay_always_desc" : "Zeigt das Magazin-Overlay durchgehend, nicht nur beim Halten von Nachladen.",
+
 	"nqr_mags_counts_title" : "Magazinanzahl anzeigen",
 	"nqr_mags_counts_desc" : "Zeigt, wie viele Magazine du im Header hast.",
 

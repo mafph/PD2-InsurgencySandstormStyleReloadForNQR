@@ -11,6 +11,9 @@
 	"nqr_mags_ammo_max_title" : "Maximum ammo",
 	"nqr_mags_ammo_max_desc" : "Maximum ammo as a percentage of the starting amount (100-200%).",
 
+	"nqr_mags_overlay_always_title" : "Overlay always open",
+	"nqr_mags_overlay_always_desc" : "Keeps the magazine overlay visible permanently instead of only while holding reload.",
+
 	"nqr_mags_counts_title" : "Show magazine count",
 	"nqr_mags_counts_desc" : "Shows how many magazines you have in the header.",
 
