@@ -38,9 +38,6 @@
 	"nqr_mags_pad_bottom_title" : "Отступ снизу",
 	"nqr_mags_pad_bottom_desc" : "Расстояние HUD от нижнего края экрана.",
 
-	"nqr_mags_debug_title" : "Отладка",
-	"nqr_mags_debug_desc" : "Пишет подробности в лог.",
-
 	"nqr_magfill_enabled_title" : "Пополнение включено",
 	"nqr_magfill_enabled_desc" : "Сумка с патронами наполняет свободные патроны, которые по одному пополняют магазины.",
 
@@ -52,9 +49,6 @@
 
 	"nqr_magfill_unblock_title" : "Сумка доступна, даже если магазин полон",
 	"nqr_magfill_unblock_desc" : "Сумка с патронами остаётся доступной, когда пополнить нужно только магазины.",
-
-	"nqr_magfill_debug_title" : "Отладка (пополнение)",
-	"nqr_magfill_debug_desc" : "Пишет подробности в лог.",
 
 	"nqr_mags_reset_title" : "Сброс",
 	"nqr_mags_reset_desc" : "Сбрасывает все настройки к значениям по умолчанию."

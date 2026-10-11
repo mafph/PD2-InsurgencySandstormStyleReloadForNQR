@@ -1,10 +1,6 @@
--- Waffen-Hooks: Nachladen (Kammer+1), Loot, Ammo-Bag, Bag-Interaktion.
-
 local cfg = rawget(_G, "NQR_MAGS")
 local rcfg = rawget(_G, "NQR_MAGFILL")
 local api = cfg.api
-local dbg = api.log
-local rdbg = rcfg.api.log
 
 local function make_on_reload_hook(orig)
 	local function hook(self, ...)
@@ -12,13 +8,13 @@ local function make_on_reload_hook(orig)
 			return orig(self, ...)
 		end
 
-		local queue, _, _, _, capacity = api.queue_of(self)
+		local queue = api.queue_of(self)
 
 		if not queue then
 			return orig(self, ...)
 		end
 
-		api.loose_of(self) -- initialisiert _nqr_mag_loose (Seiteneffekt)
+		api.loose_of(self)
 
 		local chamber = api.chamber_of(self)
 		local kept = math.max(0, math.min(chamber, self:get_ammo_remaining_in_clip()))
@@ -28,17 +24,12 @@ local function make_on_reload_hook(orig)
 
 		self._nqr_drop_count = 0
 
-		dbg("reload: clip=" .. tostring(clip) .. " chamber=" .. tostring(chamber) .. " drops=" .. tostring(drops)
-			.. " loose=" .. tostring(api.loose_of(self)) .. " queue=" .. tostring(#queue))
-
 		local gone = self._nqr_mag_gone
 
 		self._nqr_mag_gone = nil
 
 		if drops < 1 and not gone then
 			local old_mag = self._nqr_mag_installed
-			-- In r_mag_out erfasste Restmunition hat Vorrang: nach do_magdrop
-			-- entspricht clip - chamber nicht mehr dem alten Magazin.
 			local actual = self._nqr_mag_left_rounds
 
 			if actual == nil then
@@ -47,7 +38,6 @@ local function make_on_reload_hook(orig)
 
 			if not old_mag then
 				old_mag = api.new_mag(actual)
-				dbg("reload: no installed mag recorded, created rounds=" .. tostring(actual))
 			else
 				old_mag.rounds = actual
 			end
@@ -76,10 +66,6 @@ local function make_on_reload_hook(orig)
 		api.sync_total(self)
 
 		cfg.panel_dirty = true
-
-		dbg("loaded " .. tostring(installed.rounds) .. "/" .. tostring(capacity + chamber)
-			.. " chamber=" .. tostring(chamber) .. " queue=" .. tostring(#queue)
-			.. " loose=" .. tostring(api.loose_of(self)))
 
 		return ret
 	end
@@ -123,8 +109,6 @@ local function make_drop_hook(orig)
 						self._nqr_drop_count = (self._nqr_drop_count or 0) + 1
 
 						cfg.panel_dirty = true
-
-						dbg("dropped mag rounds=" .. tostring(rounds) .. " key=" .. tostring(key))
 					end
 				end
 			end
@@ -195,11 +179,9 @@ local function make_add_ammo_hook(orig)
 			return false, 0
 		end
 
-		-- Obergrenze ist ammo_max der Waffe (wird in hooks_player gesetzt)
 		local room = math.max(0, self:get_ammo_max() - self:get_ammo_total())
 
 		if add_amount > room then
-			dbg("loot " .. tostring(add_amount) .. " capped to " .. tostring(room) .. " (ammo_max " .. tostring(self:get_ammo_max()) .. ")")
 			add_amount = room
 		end
 
@@ -211,9 +193,6 @@ local function make_add_ammo_hook(orig)
 		api.set_loose(self, api.loose_of(self) + add_amount)
 		api.sync_total(self)
 		cfg.panel_dirty = true
-
-		dbg("loot " .. tostring(add_amount) .. " -> loose " .. tostring(api.loose_of(self))
-			.. " on " .. tostring(self._name_id))
 
 		return true, add_amount
 	end
@@ -232,17 +211,12 @@ local function make_bag_hook(orig)
 		local added = self:get_ammo_total() - before
 
 		if added > 0 then
-			-- Munitionstasche fuellt direkt Magazine; nur der Rest bleibt lose.
-			-- Lose Munition wird mit eingerechnet und zu vollen Magazinen gepackt.
 			local left = api.fill_mags(self, added + api.loose_of(self))
 
 			api.set_loose(self, left)
 			api.sync_total(self)
 			cfg.panel_dirty = true
 			api.refresh_hud()
-
-			rdbg("bag gave " .. tostring(added) .. " to " .. tostring(self._name_id)
-				.. " into mags, loose=" .. tostring(api.loose_of(self)))
 		end
 
 		return ret
@@ -267,8 +241,6 @@ local function make_need_ammo_hook(orig)
 	end
 end
 
--- Idempotent und billig: wird beim Laden und danach pro Frame aus hooks_player
--- aufgerufen, falls ein anderes Mod die Funktionen spaeter ueberschreibt.
 local function install_weapon_hooks()
 	api.wrap("NewRaycastWeaponBase", "can_reload", make_can_reload_hook)
 	api.wrap("NewRaycastWeaponBase", "on_reload", make_on_reload_hook)

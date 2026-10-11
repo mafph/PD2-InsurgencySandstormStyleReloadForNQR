@@ -1,5 +1,3 @@
--- Spieler-Hooks: R tippen = Nachladen, R halten = HUD, Ticker pro Frame.
-
 local cfg = rawget(_G, "NQR_MAGS")
 local rcfg = rawget(_G, "NQR_MAGFILL")
 local api = cfg.api
@@ -24,7 +22,6 @@ local function tap_hold_time()
 	return 0.2
 end
 
--- Waffe wegstecken (fuer Pickup und Refill). cfg.holster = Grund, solange die Waffe unten bleiben soll.
 local function holster_start(state, t, reason)
 	if cfg.holster == reason then return true end
 	if cfg.holster then return false end
@@ -47,14 +44,11 @@ local function holster_release(reason)
 	end
 end
 
--- Waffe ist ganz weg, wenn die Unequip-Zeit abgelaufen ist (der Timer wird vom Hook angehalten).
 local function holstered(state, t)
 	local expire = state._unequip_weapon_expire_t
 
 	return cfg.holster ~= nil and expire ~= nil and t >= expire
 end
-
--- Hook-Fabriken (api.wrap) ----------------------------------------------
 
 local function make_reload_hook(orig)
 	return function(self, t, input)
@@ -79,13 +73,10 @@ local function make_reload_hook(orig)
 			end
 
 			if t >= self._nqr_hold_t then
-				-- Langes Halten: HUD zeigen, beim Loslassen NICHT nachladen.
 				self._nqr_held_long = true
 
 				api.set_panel(true)
 
-				-- Waehrend eines laufenden Nachladens nicht wegstecken, sonst
-				-- bricht der Reload ab (ammocount bleibt leer).
 				local reloading = self._state_data and self._state_data.reload_expire_t
 
 				if not reloading and api.loose_of(wep) > 0 and api.needs_fill(wep) then
@@ -119,9 +110,6 @@ local function make_reload_hook(orig)
 	end
 end
 
--- NQR bricht ein Nachladen ab und laesst ggf. das (teilvolle) Magazin fallen
--- (nqr_playerstandard.lua:2336). Danach den Vorrat aufraeumen, damit das am
--- Boden liegende Magazin sofort aufhebbar wird.
 local function make_interupt_hook(orig)
 	return function(self, t, ...)
 		local wep = api.equipped_base()
@@ -138,7 +126,7 @@ end
 local function make_holster_hook(orig)
 	return function(self, t, input)
 		if cfg.holster and self._unequip_weapon_expire_t then
-			return -- Waffe bleibt unequipped, solange gepickt/aufgefuellt wird
+			return
 		end
 
 		return orig(self, t, input)
@@ -149,7 +137,7 @@ local function make_hud_hook(orig)
 	return function(self, wtype, max_clip, current_clip, current_left, max, weapon_panel)
 		orig(self, wtype, max_clip, current_clip, current_left, max, weapon_panel)
 
-		local ok, err = pcall(function()
+		pcall(function()
 			if self._id ~= HUDManager.PLAYER_PANEL then return end
 
 			local pl = api.player_unit()
@@ -183,10 +171,6 @@ local function make_hud_hook(orig)
 				amt:set_range_color(0, string.len(zero), amt:color():with_alpha(0.5))
 			end)
 		end)
-
-		if not ok then
-			api.log("hud mag count failed: " .. tostring(err))
-		end
 	end
 end
 
@@ -198,8 +182,6 @@ local function install_hooks()
 	api.wrap("PlayerStandard", "_interupt_action_reload", make_interupt_hook)
 	api.wrap("HUDTeammate", "set_ammo_amount_by_type", make_hud_hook)
 end
-
--- Magazin-Pickup ----------------------------------------------------------
 
 local PICKUP_RANGE = 250
 local PICKUP_HOLD = 1
@@ -231,7 +213,6 @@ local function clear_pickup()
 	cfg.pickup_t = nil
 end
 
--- Echte Schusswaffe (Primaer/Sekundaer) in der Hand? Melee zaehlt nicht.
 local function firearm_in_hand(state, pl)
 	local base = api.equipped_base()
 
@@ -244,8 +225,6 @@ local function firearm_in_hand(state, pl)
 	return sel == nil or sel == 1 or sel == 2
 end
 
--- Liegendes Magazin im Blick: erst direkter Raycast-Treffer, sonst
--- naechstes aufhebbares Magazin in einem kleinen Zielkegel.
 local function find_aimed_tag(pos, rot)
 	mvector3.set(mvec_from, pos)
 	mvector3.set(mvec_to, rot:y())
@@ -296,7 +275,6 @@ local function update_pickup(state, t)
 		end
 	end
 
-	-- Nichts am Boden: kein Raycast noetig.
 	if not cfg.enabled or next(api.dropped) == nil then
 		clear_pickup()
 		return
@@ -337,14 +315,13 @@ local function update_pickup(state, t)
 		if cfg.pickup_t or cfg.holster == "pickup" then
 			bar_stop(false)
 			cfg.pickup_t = nil
-			cfg.pickup_tag = nil -- Prompt wird im naechsten Frame neu gezeigt
+			cfg.pickup_tag = nil
 		end
 
 		return
 	end
 
 	if not cfg.pickup_t then
-		-- Schusswaffe erst wegstecken, der Balken startet erst, wenn sie ganz unten ist.
 		local in_hand = firearm_in_hand(state, pl) and state._unequip_weapon_expire_t == nil
 		local need_holster = cfg.holster == "pickup" or in_hand
 
@@ -373,8 +350,6 @@ local function update_pickup(state, t)
 		api.dropped[tag.key] = nil
 
 		pcall(function() pl:sound():play("pickup_ammo") end)
-
-		api.log("picked up dropped mag")
 	end
 
 	cfg.pickup_tag = nil
@@ -382,9 +357,6 @@ local function update_pickup(state, t)
 	cfg.pickup_shown = nil
 end
 
--- Pro-Frame-Hook ---------------------------------------------------------
-
--- Haelt ammo_max und lose Munition der ausgeruesteten Waffe aktuell.
 local function prepare_weapon(base)
 	if base._nqr_mag_loose == nil then
 		api.loose_of(base)
@@ -395,7 +367,6 @@ local function prepare_weapon(base)
 		local want = api.max_total(base)
 
 		if want and base:get_ammo_max() ~= want then
-			api.log("ammo_max " .. tostring(base:get_ammo_max()) .. " -> " .. tostring(want) .. " on " .. tostring(base._name_id))
 			base:set_ammo_max(want)
 		end
 	end
@@ -423,11 +394,9 @@ local function install_gameplay_hooks()
 
 		local input = orig_get_input(self, t, dt, paused)
 
-		-- Waffe kann sich im Original-Input geaendert haben: einmal neu bestimmen.
 		local base = api.equipped_base()
 		local applicable = base ~= nil and not api.skip_weapon(base)
 
-		-- Dauerhaft offenes Overlay: sichtbar, solange eine passende Waffe ausgeruestet ist.
 		if cfg.overlay_always and cfg.enabled then
 			local want = not paused and applicable
 

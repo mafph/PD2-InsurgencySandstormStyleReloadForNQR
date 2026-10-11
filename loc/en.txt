@@ -38,9 +38,6 @@
 	"nqr_mags_pad_bottom_title" : "Bottom padding",
 	"nqr_mags_pad_bottom_desc" : "Distance of the HUD from the bottom screen edge.",
 
-	"nqr_mags_debug_title" : "Debug",
-	"nqr_mags_debug_desc" : "Writes details to the log.",
-
 	"nqr_magfill_enabled_title" : "Refill enabled",
 	"nqr_magfill_enabled_desc" : "The ammo bag fills loose rounds that refill your magazines one by one.",
 
@@ -54,8 +51,5 @@
 	"nqr_magfill_unblock_desc" : "The ammo bag stays usable when only magazines still need refilling.",
 
 	"nqr_magfill_debug_title" : "Debug (refill)",
-	"nqr_magfill_debug_desc" : "Writes details to the log.",
-
-	"nqr_mags_reset_title" : "Reset",
-	"nqr_mags_reset_desc" : "Resets all settings to their default values."
+	"nqr_magfill_debug_desc" : "Writes details to the log."
 }

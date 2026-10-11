@@ -1,6 +1,3 @@
--- Einstieg (playerstandard-Hook): laedt die Spiel-Teile. state.lua kommt normal
--- schon ueber menu.lua (menumanager-Hook); fehlt es, wird es hier nachgeladen.
-
 local dir = rawget(_G, "ModPath")
 
 if type(dir) ~= "string" or dir == "" then

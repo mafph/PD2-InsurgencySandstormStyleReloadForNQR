@@ -38,9 +38,6 @@
 	"nqr_mags_pad_bottom_title" : "Abstand unten",
 	"nqr_mags_pad_bottom_desc" : "Abstand des HUDs zum unteren Bildschirmrand.",
 
-	"nqr_mags_debug_title" : "Debug",
-	"nqr_mags_debug_desc" : "Schreibt Details ins Log.",
-
 	"nqr_magfill_enabled_title" : "Nachfüllen aktiviert",
 	"nqr_magfill_enabled_desc" : "Ammo-Bag füllt lose Patronen, die Magazine werden nacheinander befüllt.",
 
@@ -52,9 +49,6 @@
 
 	"nqr_magfill_unblock_title" : "Bag auch bei vollem Clip nutzbar",
 	"nqr_magfill_unblock_desc" : "Ammo-Bag bleibt benutzbar, wenn nur noch Magazine gefüllt werden müssen.",
-
-	"nqr_magfill_debug_title" : "Debug (Nachfüllen)",
-	"nqr_magfill_debug_desc" : "Schreibt Details ins Log.",
 
 	"nqr_mags_reset_title" : "Zurücksetzen",
 	"nqr_mags_reset_desc" : "Setzt alle Einstellungen auf die Standardwerte."

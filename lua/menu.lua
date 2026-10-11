@@ -1,9 +1,7 @@
--- Einstieg (menumanager-Hook): laedt zuerst den gemeinsamen Zustand.
 dofile(ModPath .. "lua/state.lua")
 
 local cfg = rawget(_G, "NQR_MAGS")
 local rcfg = rawget(_G, "NQR_MAGFILL")
-local dbg = cfg.api.log
 
 local MAGS_MENU_ID = "nqr_mags_menu"
 local LOC_PATH = ModPath .. "loc/"
@@ -28,14 +26,11 @@ Hooks:Add("LocalizationManagerPostInit", "nqr_mags_loc_init", function(loc)
 		loc:load_localization_file(LOC_PATH .. code .. ".txt")
 	end
 
-	-- Englisch als Fallback; ueberschreibt vorhandene Texte nicht.
 	if code ~= "en" or not own then
 		loc:load_localization_file(LOC_PATH .. "en.txt", not own)
 	end
 end)
 
--- Die Menue-Eintraege kommen aus den Schemata in state.lua. Texte und Callback
--- heissen immer <id>_title, <id>_desc und <id>_callback.
 local GROUPS = {
 	{ schema = cfg.api.schema, target = cfg, api = cfg.api },
 	{ schema = rcfg.api.schema, target = rcfg, api = rcfg.api }
@@ -132,8 +127,6 @@ local function register_callback(def, target, save)
 	end
 end
 
--- Setzt Menue-Anzeige, gespeicherte Werte und Datei zurueck.
--- (ResetItemsToDefaultValue aendert nur das Menue, nicht die Werte.)
 local function reset_all(item)
 	for g = 1, #GROUPS do
 		local group = GROUPS[g]
@@ -178,7 +171,6 @@ Hooks:Add("MenuManagerBuildCustomMenus", "nqr_mags_menu_build", function(_, node
 	local parent = nodes and (nodes.lua_mod_options_menu or nodes.blt_options or nodes.options)
 
 	if not parent then
-		dbg("no parent menu node found")
 		return
 	end
 

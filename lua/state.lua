@@ -4,37 +4,6 @@ _G.NQR_MAGS = cfg
 local rcfg = rawget(_G, "NQR_MAGFILL") or {}
 _G.NQR_MAGFILL = rcfg
 
-local function print_log(prefix, ...)
-	local parts = {}
-
-	for i = 1, select("#", ...) do
-		parts[#parts + 1] = tostring(select(i, ...))
-	end
-
-	local out = prefix .. " " .. table.concat(parts, " ")
-
-	if _G.log then
-		_G.log(out)
-	else
-		print(out)
-	end
-end
-
-local function dbg(...)
-	if not cfg.debug then return end
-
-	print_log("[nqr_mags]", ...)
-end
-
-local function rdbg(...)
-	if not rcfg.debug then return end
-
-	print_log("[nqr_magfill]", ...)
-end
-
--- Einzige Quelle fuer Einstellungen: Key, Default, Menue-Eintrag.
--- Settings-Keys, Defaults und das Menue (menu.lua) werden daraus abgeleitet.
--- Menue-Texte kommen aus der Loc-Datei: <id>_title / <id>_desc.
 local MAGS_SCHEMA = {
 	{ key = "enabled", id = "nqr_mags_enabled", type = "toggle", default = true },
 	{ key = "max_extra_mags", id = "nqr_mags_max_extra", type = "slider", default = 0, min = 0, max = 2, step = 1, precision = 0 },
@@ -47,16 +16,14 @@ local MAGS_SCHEMA = {
 	{ key = "show_more", id = "nqr_mags_more", type = "toggle", default = true },
 	{ key = "font_size", id = "nqr_mags_font", type = "slider", default = 20, min = 10, max = 28, step = 1, precision = 0 },
 	{ key = "pad_right", id = "nqr_mags_pad_right", type = "slider", default = 220, min = -100, max = 300, step = 2, precision = 0 },
-	{ key = "pad_bottom", id = "nqr_mags_pad_bottom", type = "slider", default = 100, min = -50, max = 400, step = 2, precision = 0 },
-	{ key = "debug", id = "nqr_mags_debug", type = "toggle", default = false }
+	{ key = "pad_bottom", id = "nqr_mags_pad_bottom", type = "slider", default = 100, min = -50, max = 400, step = 2, precision = 0 }
 }
 
 local FILL_SCHEMA = {
 	{ key = "enabled", id = "nqr_magfill_enabled", type = "toggle", default = true },
 	{ key = "round_interval", id = "nqr_magfill_interval", type = "slider", default = 0.25, min = 0.02, max = 1, step = 0.01, precision = 2 },
 	{ key = "sound", id = "nqr_magfill_sound", type = "toggle", default = true },
-	{ key = "unblock_bag", id = "nqr_magfill_unblock", type = "toggle", default = true },
-	{ key = "debug", id = "nqr_magfill_debug", type = "toggle", default = false }
+	{ key = "unblock_bag", id = "nqr_magfill_unblock", type = "toggle", default = true }
 }
 
 local function schema_keys(schema)
@@ -84,7 +51,7 @@ local FILL_SETTINGS_KEYS = schema_keys(FILL_SCHEMA)
 local MAGS_DEFAULTS = schema_defaults(MAGS_SCHEMA)
 local FILL_DEFAULTS = schema_defaults(FILL_SCHEMA)
 
-local function load_settings(target, name, keys, logf)
+local function load_settings(target, name, keys)
 	if target.settings_loaded then return end
 
 	target.settings_loaded = true
@@ -104,7 +71,6 @@ local function load_settings(target, name, keys, logf)
 	local ok, data = pcall(json.decode, raw)
 
 	if not ok or type(data) ~= "table" then
-		logf("settings file unreadable")
 		return
 	end
 
@@ -113,11 +79,9 @@ local function load_settings(target, name, keys, logf)
 			target[key] = value
 		end
 	end
-
-	logf("settings loaded")
 end
 
-local function save_settings(target, name, keys, logf)
+local function save_settings(target, name, keys)
 	if not rawget(_G, "json") then return end
 
 	local data = {}
@@ -129,7 +93,6 @@ local function save_settings(target, name, keys, logf)
 	local ok, encoded = pcall(json.encode, data)
 
 	if not ok then
-		logf("settings encode failed")
 		return
 	end
 
@@ -138,13 +101,11 @@ local function save_settings(target, name, keys, logf)
 	if file then
 		file:write(encoded)
 		file:close()
-	else
-		logf("settings file not writable")
 	end
 end
 
-load_settings(cfg, "nqr_mags_settings.txt", MAGS_SETTINGS_KEYS, dbg)
-load_settings(rcfg, "nqr_magfill_settings.txt", FILL_SETTINGS_KEYS, rdbg)
+load_settings(cfg, "nqr_mags_settings.txt", MAGS_SETTINGS_KEYS)
+load_settings(rcfg, "nqr_magfill_settings.txt", FILL_SETTINGS_KEYS)
 
 local function apply_defaults(target, defaults)
 	for key, value in pairs(defaults) do
@@ -163,11 +124,6 @@ cfg.dropped = cfg.dropped or {}
 
 apply_defaults(rcfg, FILL_DEFAULTS)
 
--- Hook-Helfer ------------------------------------------------------------
--- Wickelt Klasse.funktion genau einmal ein. make(orig) liefert den Hook
--- function(self, ...). Wird die Funktion spaeter von einem anderen Mod erneut
--- ueberschrieben, wird neu eingewickelt; der busy-Guard verhindert dann, dass
--- unser Hook doppelt in der Kette laeuft (z.B. Magazin doppelt in die Queue).
 cfg.hooks = cfg.hooks or {}
 
 local function wrap(class_name, fn_name, make)
@@ -215,7 +171,6 @@ local function player_unit()
 	return managers.player and managers.player:player_unit()
 end
 
--- Lokalisierter Text mit Fallback, falls der Key in der Loc-Datei fehlt.
 local function L(id, fallback)
 	local loc = managers.localization
 
@@ -226,7 +181,6 @@ local function L(id, fallback)
 	return fallback
 end
 
--- Anzahl Zusatzmagazine aus den Einstellungen (nie negativ, ganzzahlig).
 local function extra_mags()
 	return math.max(0, math.floor(cfg.max_extra_mags or 0))
 end
@@ -263,9 +217,6 @@ local function find_mag_part(blueprint)
 			local has_clip = part.stats and part.stats.CLIP_AMMO_MAX
 
 			if has_clip then
-				-- Teil mit CLIP_AMMO_MAX bevorzugen: bei Revolvern (z.B. model3)
-				-- traegt das Magazin-Slot-Teil (m_bullets/m_body) keine Kapazitaet,
-				-- die echte Kapazitaet steht auf dem Zylinder.
 				if part.type == "magazine" then
 					return blueprint[i]
 				end
@@ -280,8 +231,6 @@ local function find_mag_part(blueprint)
 	return clip or magazine
 end
 
--- Wird pro Frame mehrfach gebraucht, daher an der Waffe gecacht
--- (Blueprint-Identitaet + Laenge pruefen, falls sich die Teile aendern).
 local function mag_part_id(wep)
 	local blueprint = wep._blueprint
 
@@ -360,7 +309,6 @@ local function mag_amount_for(pid, caliber, name_id)
 		return math.floor(amount)
 	end
 
-	-- NQR-Fallback wie deren replenish: AMMO_MAX der Waffe als ganze Magazine
 	local capacity = pid and caliber and mag_capacity(pid, caliber) or 0
 	local tweak = name_id and tweak_data.weapon[name_id]
 
@@ -397,7 +345,6 @@ local function queue_of(wep)
 		end
 
 		cfg.mags[key] = queue
-		dbg("seeded " .. key .. " x" .. tostring(#queue) .. " cap=" .. tostring(capacity))
 	end
 
 	return queue, key, pid, caliber, mag_capacity(pid, caliber)
@@ -409,7 +356,6 @@ local function sort_queue(queue)
 	end)
 end
 
--- NQR-Stufe r_mag_out: altes Magazin verlaesst die Waffe.
 local function mag_left(wep)
 	local queue = queue_of(wep)
 
@@ -423,24 +369,13 @@ local function mag_left(wep)
 	wep._nqr_no_mag = true
 
 	cfg.panel_dirty = true
-
-	dbg("stage mag out rounds=" .. tostring(rounds) .. " on " .. tostring(wep._name_id))
 end
 
--- NQR-Stufe r_get_new_mag_in: neues Magazin geht rein. Der eigentliche Tausch
--- (altes Magazin zurueck in die Queue, naechstes entnehmen) passiert bewusst
--- erst in on_reload (nach abgeschlossenem Nachladen). Wuerde hier getauscht,
--- verschluckt ein abgebrochenes/erneut angestossenes Nachladen Magazine,
--- ohne dass das Hauptmagazin gefuellt wird.
 local function mag_entered(wep)
 	wep._nqr_no_mag = nil
 	cfg.panel_dirty = true
-	dbg("stage mag in on " .. tostring(wep._name_id))
 end
 
--- Nachladen wurde abgebrochen. NQR laesst dabei ggf. ein (teilvolles) Magazin
--- fallen (nqr_playerstandard.lua:2336). In dem Fall laeuft r_get_new_mag_in nie,
--- also muss hier aufgeraeumt werden: das fallengelassene Magazin fehlt im Vorrat.
 local function reload_interrupted(wep)
 	if not wep._nqr_mag_left_rounds and (wep._nqr_drop_count or 0) < 1 then return end
 
@@ -455,19 +390,14 @@ local function reload_interrupted(wep)
 	if not queue then return end
 
 	if drops >= 1 then
-		-- Das eingesteckte Magazin liegt am Boden; die Queue enthaelt es nicht
-		-- (nur Reserve), also bleibt sie unveraendert. Waffe ist leer.
 		wep._nqr_no_mag = true
 		wep._nqr_mag_gone = true
 		wep._nqr_mag_installed = new_mag(0)
 	else
-		-- Kein Drop: das (teilvolle) Magazin steckt weiterhin in der Waffe.
 		wep._nqr_mag_installed = new_mag(math.max(0, wep:get_ammo_remaining_in_clip() - chamber_of(wep)))
 		wep._nqr_no_mag = nil
 		wep._nqr_mag_gone = nil
 	end
-
-	dbg("reload interrupted drops=" .. tostring(drops) .. " queue=" .. tostring(#queue))
 end
 
 local sync_total
@@ -475,7 +405,6 @@ local sync_total
 local function loose_of(wep)
 	if wep._nqr_mag_loose == nil then
 		wep._nqr_mag_loose = 0
-		dbg("initial loose 0 on " .. tostring(wep._name_id))
 		sync_total(wep)
 	end
 
@@ -503,7 +432,6 @@ sync_total = function(wep)
 	wep:set_ammo_total(wep:get_ammo_remaining_in_clip() + loose_of(wep) + queue_rounds(wep))
 end
 
--- Wert fuer ammo_max der Waffe: ammo_max-Prozent mal Startmenge (volles Magazin + Rebalance-Magazinanzahl * Magazingroesse).
 local function max_total(wep)
 	local pid = mag_part_id(wep)
 	local caliber = wep._caliber
@@ -559,7 +487,6 @@ local function can_pickup_dropped(tag)
 	local cap = dropped_cap(tag)
 	local wep = equipped_base()
 
-	-- Ohne Magazin in der Waffe zaehlt der Platz fuer das eingesteckte mit.
 	if wep and wep._nqr_mag_gone and queue_of(wep) == queue then
 		cap = cap + 1
 	end
@@ -580,20 +507,15 @@ local function pickup_dropped(tag)
 		sync_total(wep)
 	end
 
-	dbg("picked up mag rounds=" .. tostring(tag.rounds or 0) .. " key=" .. tostring(tag.queue_key)
-		.. " queue=" .. tostring(#queue))
-
 	cfg.panel_dirty = true
 	refresh_hud()
 
 	return true
 end
 
--- Beendet den Job, sobald alle Waffen abgearbeitet sind.
 local function job_done(job)
 	if job.index <= #job.list then return false end
 
-	rdbg("refill done, rounds filled=" .. tostring(job.filled))
 	rcfg.job = nil
 
 	return true
@@ -618,11 +540,8 @@ local function add_to_job(wep)
 	end
 
 	rcfg.job.list[#rcfg.job.list + 1] = wep
-
-	rdbg("queued " .. tostring(wep._name_id) .. " for refill")
 end
 
--- Platz im Magazin, das in der Waffe steckt (0 wenn keins drin ist).
 local function installed_room(wep, capacity)
 	if wep._nqr_no_mag or wep._nqr_mag_gone then return 0 end
 
@@ -631,8 +550,6 @@ local function installed_room(wep, capacity)
 	return math.max(0, capacity - rounds)
 end
 
--- Verteilt Munition direkt auf Magazine: erst die Queue, zuletzt das Magazin
--- in der Waffe. Gibt zurueck, was nicht mehr reinpasst (bleibt lose).
 local function fill_mags(wep, amount)
 	local queue, _, pid, caliber, capacity = queue_of(wep)
 
@@ -645,7 +562,6 @@ local function fill_mags(wep, amount)
 		amount = amount - take
 	end
 
-	-- Fehlende Magazine neu anlegen (bis zum Maximum), sonst bleibt der Rest lose.
 	local max_mags = mag_amount_for(pid, caliber, wep._name_id) + extra_mags()
 
 	if wep._nqr_mag_gone then max_mags = max_mags + 1 end
@@ -673,7 +589,6 @@ local function fill_mags(wep, amount)
 	return amount
 end
 
--- Fuellt pro Aufruf genau eine Patrone aus den losen Patronen ins naechste nicht volle Magazin.
 local function fill_one_round()
 	local job = rcfg.job
 
@@ -710,7 +625,6 @@ local function fill_one_round()
 
 	local into_gun = false
 
-	-- Zuletzt das Magazin in der Waffe auffuellen.
 	if not target and installed_room(wep, capacity) > 0 then
 		into_gun = true
 		target = wep._nqr_mag_installed or new_mag(0)
@@ -739,8 +653,6 @@ local function fill_one_round()
 	cfg.panel_dirty = true
 
 	if target.rounds >= capacity then
-		rdbg("mag full " .. tostring(capacity) .. " loose=" .. tostring(loose_of(wep)) .. " rounds=" .. tostring(job.filled))
-
 		if rcfg.sound then
 			local unit = player_unit()
 
@@ -836,8 +748,7 @@ cfg.api.fill_mags = fill_mags
 cfg.api.tick = tick
 cfg.api.magazines_need_fill = magazines_need_fill
 cfg.api.needs_fill = needs_fill
-cfg.api.save = function() save_settings(cfg, "nqr_mags_settings.txt", MAGS_SETTINGS_KEYS, dbg) end
-cfg.api.log = dbg
+cfg.api.save = function() save_settings(cfg, "nqr_mags_settings.txt", MAGS_SETTINGS_KEYS) end
 cfg.api.defaults = MAGS_DEFAULTS
 cfg.api.schema = MAGS_SCHEMA
 cfg.api.wrap = wrap
@@ -846,7 +757,6 @@ cfg.api.L = L
 
 rcfg.api = rcfg.api or {}
 
-rcfg.api.save = function() save_settings(rcfg, "nqr_magfill_settings.txt", FILL_SETTINGS_KEYS, rdbg) end
-rcfg.api.log = rdbg
+rcfg.api.save = function() save_settings(rcfg, "nqr_magfill_settings.txt", FILL_SETTINGS_KEYS) end
 rcfg.api.defaults = FILL_DEFAULTS
 rcfg.api.schema = FILL_SCHEMA

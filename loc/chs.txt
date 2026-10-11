@@ -38,9 +38,6 @@
 	"nqr_mags_pad_bottom_title" : "下边距",
 	"nqr_mags_pad_bottom_desc" : "HUD 距离屏幕下边缘的距离。",
 
-	"nqr_mags_debug_title" : "调试",
-	"nqr_mags_debug_desc" : "将详细信息写入日志。",
-
 	"nqr_magfill_enabled_title" : "装填已启用",
 	"nqr_magfill_enabled_desc" : "弹药包补充散落子弹，弹药会逐个装满弹匣。",
 
@@ -52,9 +49,6 @@
 
 	"nqr_magfill_unblock_title" : "夹子满时弹药包仍可用",
 	"nqr_magfill_unblock_desc" : "当仅需补充弹匣时，弹药包依然可用。",
-
-	"nqr_magfill_debug_title" : "调试（装填）",
-	"nqr_magfill_debug_desc" : "将详细信息写入日志。",
 
 	"nqr_mags_reset_title" : "重置",
 	"nqr_mags_reset_desc" : "将所有设置重置为默认值。"

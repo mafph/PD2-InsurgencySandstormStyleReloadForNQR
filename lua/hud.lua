@@ -1,5 +1,3 @@
--- Sandstorm-HUD: Magazin-Reihen als Kaesten, unten rechts.
-
 local cfg = rawget(_G, "NQR_MAGS")
 local api = cfg.api
 
@@ -9,13 +7,10 @@ local BG_COLOR = Color(0, 0, 0, 0.35)
 local LINE_COLOR = Color(1, 1, 1, 1)
 local FONT = "fonts/font_medium_mf"
 
--- Kasten-Geometrie (keine Einstellungen)
 local BOX_W = 20
 local BOX_H = 28
 local BOX_GAP = 4
 
--- Liest den aktuellen Magazinzustand der ausgeruesteten Waffe. Gleicht dabei
--- installed.rounds mit dem Magazin der Waffe ab und sortiert die Queue.
 local function collect_rows()
 	local wep = api.equipped_base()
 
@@ -90,7 +85,6 @@ local function draw_header(panel, rows, row_w)
 	add_text(panel, "nqr_mags_header", 2, 0, row_w - 4, cfg.font_size, cfg.font_size, table.concat(parts, "    "))
 end
 
--- Kein Magazin in der Waffe: gestrichelter Rahmen + X
 local function draw_no_mag(panel, x, y)
 	local dash, gap, t = 4, 3, 2
 
