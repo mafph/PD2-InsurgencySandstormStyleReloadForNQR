@@ -1,5 +1,3 @@
--- Zustand und Kernlogik: Magazine als Objekte, lose Munition, Refill-Job, Settings.
-
 local cfg = rawget(_G, "NQR_MAGS") or {}
 _G.NQR_MAGS = cfg
 
@@ -37,8 +35,11 @@ end
 local MAGS_SETTINGS_KEYS = {
 	enabled = true,
 	max_extra_mags = true,
+	ammo_max = true,
 	max_boxes = true,
-	show_counts = true,
+	show_mags = true,
+	show_loose = true,
+	show_more = true,
 	show_ammo_type = true,
 	font_size = true,
 	pad_right = true,
@@ -52,6 +53,29 @@ local FILL_SETTINGS_KEYS = {
 	sound = true,
 	unblock_bag = true,
 	debug = true
+}
+
+local MAGS_DEFAULTS = {
+	enabled = true,
+	max_extra_mags = 0,
+	ammo_max = 125,
+	max_boxes = 4,
+	show_mags = false,
+	show_loose = true,
+	show_more = true,
+	show_ammo_type = false,
+	font_size = 20,
+	pad_right = 220,
+	pad_bottom = 100,
+	debug = false
+}
+
+local FILL_DEFAULTS = {
+	enabled = true,
+	round_interval = 0.25,
+	sound = true,
+	unblock_bag = true,
+	debug = false
 }
 
 local function load_settings(target, name, keys, log)
@@ -113,30 +137,28 @@ local function save_settings(target, name, keys, log)
 	end
 end
 
-cfg.enabled = cfg.enabled ~= false
-cfg.max_extra_mags = cfg.max_extra_mags or 0
-cfg.total_factor = cfg.total_factor or 1.5
-cfg.max_boxes = cfg.max_boxes or 14
-cfg.show_counts = cfg.show_counts ~= false
-cfg.show_ammo_type = cfg.show_ammo_type ~= false
+load_settings(cfg, "nqr_mags_settings.txt", MAGS_SETTINGS_KEYS, dbg)
+load_settings(rcfg, "nqr_magfill_settings.txt", FILL_SETTINGS_KEYS, rdbg)
+
+local function apply_defaults(target, defaults)
+	for key, value in pairs(defaults) do
+		if target[key] == nil then
+			target[key] = value
+		elseif type(value) == "boolean" then
+			target[key] = target[key] == true or target[key] == "on"
+		end
+	end
+end
+
+apply_defaults(cfg, MAGS_DEFAULTS)
+
 cfg.box_w = cfg.box_w or 20
 cfg.box_h = cfg.box_h or 28
 cfg.box_gap = cfg.box_gap or 4
-cfg.pad_right = cfg.pad_right or 24
-cfg.pad_bottom = cfg.pad_bottom or 96
-cfg.font_size = cfg.font_size or 16
-cfg.debug = cfg.debug or false
 cfg.mags = cfg.mags or {}
 cfg.dropped = cfg.dropped or {}
 
-rcfg.enabled = rcfg.enabled ~= false
-rcfg.round_interval = rcfg.round_interval or 0.1
-rcfg.sound = rcfg.sound ~= false
-rcfg.unblock_bag = rcfg.unblock_bag ~= false
-rcfg.debug = rcfg.debug or false
-
-load_settings(cfg, "nqr_mags_settings.txt", MAGS_SETTINGS_KEYS, dbg)
-load_settings(rcfg, "nqr_magfill_settings.txt", FILL_SETTINGS_KEYS, rdbg)
+apply_defaults(rcfg, FILL_DEFAULTS)
 
 local function equipped_unit()
 	local unit = managers.player and managers.player:player_unit()
@@ -326,7 +348,7 @@ sync_total = function(wep)
 	wep:set_ammo_total(wep:get_ammo_remaining_in_clip() + loose_of(wep) + queue_rounds(wep))
 end
 
--- Wert fuer ammo_max der Waffe: total_factor mal Startmenge (volles Magazin + Rebalance-Magazinanzahl * Magazingroesse).
+-- Wert fuer ammo_max der Waffe: ammo_max-Prozent mal Startmenge (volles Magazin + Rebalance-Magazinanzahl * Magazingroesse).
 local function max_total(wep)
 	local pid = mag_part_id(wep)
 	local caliber = wep._caliber
@@ -336,7 +358,7 @@ local function max_total(wep)
 	local capacity = mag_capacity(pid, caliber)
 	local base = capacity + chamber_of(wep) + nqr_mag_amount(wep) * capacity
 
-	return math.floor(base * math.max(1, cfg.total_factor or 1.5))
+	return math.floor(base * math.max(1, (cfg.ammo_max or 125) / 100))
 end
 
 local function skip_weapon(wep)
@@ -576,8 +598,10 @@ cfg.api.magazines_need_fill = magazines_need_fill
 cfg.api.needs_fill = needs_fill
 cfg.api.save = function() save_settings(cfg, "nqr_mags_settings.txt", MAGS_SETTINGS_KEYS, dbg) end
 cfg.api.log = dbg
+cfg.api.defaults = MAGS_DEFAULTS
 
 rcfg.api = rcfg.api or {}
 
 rcfg.api.save = function() save_settings(rcfg, "nqr_magfill_settings.txt", FILL_SETTINGS_KEYS, rdbg) end
 rcfg.api.log = rdbg
+rcfg.api.defaults = FILL_DEFAULTS

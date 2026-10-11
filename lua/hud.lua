@@ -63,8 +63,10 @@ local function build_panel(rows)
 
 	local shown = math.min(#list, cfg.max_boxes)
 	local row_w = (cfg.box_w + cfg.box_gap) * cfg.max_boxes + cfg.box_gap
-	local head_h = cfg.show_counts and (cfg.font_size + 2) or 0
-	local foot_h = cfg.show_counts and (cfg.font_size + 2) or 0
+	local header_on = cfg.show_mags or cfg.show_loose
+	local foot_on = cfg.show_mags or cfg.show_ammo_type
+	local head_h = header_on and (cfg.font_size + 2) or 0
+	local foot_h = foot_on and (cfg.font_size + 2) or 0
 	local panel_h = head_h + cfg.box_h + 6 + foot_h
 	local panel = root:panel({
 		name = "nqr_mags_panel",
@@ -85,7 +87,17 @@ local function build_panel(rows)
 		color = BG_COLOR
 	})
 
-	if cfg.show_counts then
+	if header_on then
+		local parts = {}
+
+		if cfg.show_mags then
+			parts[#parts + 1] = "MAGS " .. tostring(#rows.queue)
+		end
+
+		if cfg.show_loose then
+			parts[#parts + 1] = "LOSE " .. tostring(rows.loose)
+		end
+
 		panel:text({
 			name = "nqr_mags_header",
 			x = 2,
@@ -96,7 +108,7 @@ local function build_panel(rows)
 			color = LINE_COLOR,
 			font = FONT,
 			font_size = cfg.font_size,
-			text = "MAGS " .. tostring(#rows.queue) .. "    LOSE " .. tostring(rows.loose),
+			text = table.concat(parts, "    "),
 			vertical = "center",
 			align = "left"
 		})
@@ -146,11 +158,36 @@ local function build_panel(rows)
 		end
 	end
 
-	if cfg.show_counts then
-		local text = "NEXT " .. tostring(list[1] and list[1].rounds or 0) .. "/" .. tostring(rows.full)
+	if cfg.show_more and #list > shown then
+		local x = cfg.box_gap + (shown - 1) * (cfg.box_w + cfg.box_gap)
 
-		if cfg.show_ammo_type then
-			text = text .. "    " .. tostring(rows.caliber)
+		panel:text({
+			name = "nqr_mags_more",
+			x = x,
+			y = head_h,
+			w = cfg.box_w,
+			h = cfg.box_h,
+			layer = 13,
+			color = LINE_COLOR,
+			font = FONT,
+			font_size = math.min(cfg.font_size, 14),
+			text = "+" .. tostring(#list - shown),
+			vertical = "center",
+			align = "center"
+		})
+	end
+
+	if foot_on then
+		local text = nil
+
+		if cfg.show_mags then
+			text = "NEXT " .. tostring(list[1] and list[1].rounds or 0) .. "/" .. tostring(rows.full)
+
+			if cfg.show_ammo_type then
+				text = text .. "    " .. tostring(rows.caliber)
+			end
+		else
+			text = tostring(rows.caliber)
 		end
 
 		panel:text({

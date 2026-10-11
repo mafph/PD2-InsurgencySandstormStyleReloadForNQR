@@ -1,0 +1,58 @@
+{
+	"nqr_mags_menu_title" : "NQR Magazines",
+	"nqr_mags_menu_desc" : "Magazin- und Nachlade-Einstellungen",
+
+	"nqr_mags_enabled_title" : "Aktiviert",
+	"nqr_mags_enabled_desc" : "Magazine als eigene Objekte mit Sandstorm-HUD.",
+
+	"nqr_mags_max_extra_title" : "Zusätzliche Magazine",
+	"nqr_mags_max_extra_desc" : "Wie viele Magazine über die NQR-Magazinanzahl hinaus gefüllt werden (0-2).",
+
+	"nqr_mags_ammo_max_title" : "Maximale Munition",
+	"nqr_mags_ammo_max_desc" : "Maximale Munition als Prozentsatz der Startmenge (100-200%).",
+
+	"nqr_mags_counts_title" : "Magazinanzahl anzeigen",
+	"nqr_mags_counts_desc" : "Zeigt, wie viele Magazine du im Header hast.",
+
+	"nqr_mags_loose_title" : "Lose Munition anzeigen",
+	"nqr_mags_loose_desc" : "Zeigt die losen Patronen im Header.",
+
+	"nqr_mags_ammo_type_title" : "Munitionstyp anzeigen",
+	"nqr_mags_ammo_type_desc" : "Zeigt neben der Munition den Kaliber an.",
+
+	"nqr_mags_max_boxes_title" : "Max. Kästen",
+	"nqr_mags_max_boxes_desc" : "Wie viele Magazine im HUD gezeigt werden.",
+
+	"nqr_mags_more_title" : "Weitere Magazine mit + anzeigen",
+	"nqr_mags_more_desc" : "Zeigt versteckte Rest-Magazine als +N im letzten Kasten.",
+
+	"nqr_mags_font_title" : "Schriftgröße",
+	"nqr_mags_font_desc" : "Größe der HUD-Schrift.",
+
+	"nqr_mags_pad_right_title" : "Abstand rechts",
+	"nqr_mags_pad_right_desc" : "Abstand des HUDs zum rechten Bildschirmrand.",
+
+	"nqr_mags_pad_bottom_title" : "Abstand unten",
+	"nqr_mags_pad_bottom_desc" : "Abstand des HUDs zum unteren Bildschirmrand.",
+
+	"nqr_mags_debug_title" : "Debug",
+	"nqr_mags_debug_desc" : "Schreibt Details ins Log.",
+
+	"nqr_magfill_enabled_title" : "Nachfüllen aktiviert",
+	"nqr_magfill_enabled_desc" : "Ammo-Bag füllt lose Patronen, die Magazine werden nacheinander befüllt.",
+
+	"nqr_magfill_interval_title" : "Sekunden pro Patrone",
+	"nqr_magfill_interval_desc" : "Pause zwischen zwei Patronen, die ins Magazin gefüllt werden. Nur bei weggesteckter Waffe.",
+
+	"nqr_magfill_sound_title" : "Sound",
+	"nqr_magfill_sound_desc" : "Spielt einen Sound ab, wenn ein Magazin voll ist.",
+
+	"nqr_magfill_unblock_title" : "Bag auch bei vollem Clip nutzbar",
+	"nqr_magfill_unblock_desc" : "Ammo-Bag bleibt benutzbar, wenn nur noch Magazine gefüllt werden müssen.",
+
+	"nqr_magfill_debug_title" : "Debug (Nachfüllen)",
+	"nqr_magfill_debug_desc" : "Schreibt Details ins Log.",
+
+	"nqr_mags_reset_title" : "Zurücksetzen",
+	"nqr_mags_reset_desc" : "Setzt alle Einstellungen auf die Standardwerte."
+}

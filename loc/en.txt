@@ -1,0 +1,58 @@
+{
+	"nqr_mags_menu_title" : "NQR Magazines",
+	"nqr_mags_menu_desc" : "Magazine and refill settings",
+
+	"nqr_mags_enabled_title" : "Enabled",
+	"nqr_mags_enabled_desc" : "Magazines as tracked objects with the Sandstorm HUD.",
+
+	"nqr_mags_max_extra_title" : "Extra magazines",
+	"nqr_mags_max_extra_desc" : "How many magazines beyond the NQR magazine count are filled (0-2).",
+
+	"nqr_mags_ammo_max_title" : "Maximum ammo",
+	"nqr_mags_ammo_max_desc" : "Maximum ammo as a percentage of the starting amount (100-200%).",
+
+	"nqr_mags_counts_title" : "Show magazine count",
+	"nqr_mags_counts_desc" : "Shows how many magazines you have in the header.",
+
+	"nqr_mags_loose_title" : "Show loose ammo",
+	"nqr_mags_loose_desc" : "Shows the loose rounds in the header.",
+
+	"nqr_mags_ammo_type_title" : "Show ammo type",
+	"nqr_mags_ammo_type_desc" : "Shows the caliber next to the ammo count.",
+
+	"nqr_mags_max_boxes_title" : "Max. boxes",
+	"nqr_mags_max_boxes_desc" : "How many magazines are shown in the HUD.",
+
+	"nqr_mags_more_title" : "Show extra magazines with +",
+	"nqr_mags_more_desc" : "Shows hidden remaining magazines as +N in the last box.",
+
+	"nqr_mags_font_title" : "Font size",
+	"nqr_mags_font_desc" : "Size of the HUD font.",
+
+	"nqr_mags_pad_right_title" : "Right padding",
+	"nqr_mags_pad_right_desc" : "Distance of the HUD from the right screen edge.",
+
+	"nqr_mags_pad_bottom_title" : "Bottom padding",
+	"nqr_mags_pad_bottom_desc" : "Distance of the HUD from the bottom screen edge.",
+
+	"nqr_mags_debug_title" : "Debug",
+	"nqr_mags_debug_desc" : "Writes details to the log.",
+
+	"nqr_magfill_enabled_title" : "Refill enabled",
+	"nqr_magfill_enabled_desc" : "The ammo bag fills loose rounds that refill your magazines one by one.",
+
+	"nqr_magfill_interval_title" : "Seconds per round",
+	"nqr_magfill_interval_desc" : "Pause between two rounds filled into the magazine. Only with the weapon holstered.",
+
+	"nqr_magfill_sound_title" : "Sound",
+	"nqr_magfill_sound_desc" : "Plays a sound when a magazine is full.",
+
+	"nqr_magfill_unblock_title" : "Bag usable with full mag",
+	"nqr_magfill_unblock_desc" : "The ammo bag stays usable when only magazines still need refilling.",
+
+	"nqr_magfill_debug_title" : "Debug (refill)",
+	"nqr_magfill_debug_desc" : "Writes details to the log.",
+
+	"nqr_mags_reset_title" : "Reset",
+	"nqr_mags_reset_desc" : "Resets all settings to their default values."
+}
