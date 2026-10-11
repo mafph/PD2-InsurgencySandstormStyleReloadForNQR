@@ -1,5 +1,5 @@
--- Einstieg (playerstandard-Hook): laedt die Spiel-Teile. state.lua kommt schon
--- ueber menu.lua (menumanager-Hook), der vor dem Spiel laeuft.
+-- Einstieg (playerstandard-Hook): laedt die Spiel-Teile. state.lua kommt normal
+-- schon ueber menu.lua (menumanager-Hook); fehlt es, wird es hier nachgeladen.
 
 local dir = rawget(_G, "ModPath")
 
@@ -12,23 +12,32 @@ if dir ~= "" and not dir:match("[/\\]$") then
 	dir = dir .. "/"
 end
 
-local PARTS = {
-	"hud",
-	"hooks_weapon",
-	"hooks_player"
-}
+local function report(name, err)
+	local out = "[nqr_mags] " .. name .. " failed: " .. tostring(err)
 
-for i = 1, #PARTS do
-	local name = "lua/" .. PARTS[i] .. ".lua"
-	local ok, err = pcall(dofile, dir .. name)
+	if _G.log then
+		_G.log(out)
+	else
+		print(out)
+	end
+end
+
+local function load_part(name)
+	local ok, err = pcall(dofile, dir .. "lua/" .. name .. ".lua")
 
 	if not ok then
-		local out = "[nqr_mags] " .. name .. " failed: " .. tostring(err)
-
-		if _G.log then
-			_G.log(out)
-		else
-			print(out)
-		end
+		report(name, err)
 	end
+
+	return ok
+end
+
+local cfg = rawget(_G, "NQR_MAGS")
+
+if not (cfg and cfg.api) then
+	if not load_part("state") then return end
+end
+
+for _, name in ipairs({ "hud", "hooks_weapon", "hooks_player" }) do
+	load_part(name)
 end

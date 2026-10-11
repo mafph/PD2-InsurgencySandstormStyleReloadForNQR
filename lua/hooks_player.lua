@@ -30,7 +30,7 @@ local function holster_start(state, t, reason)
 	if cfg.holster then return false end
 	if state:_changing_weapon() then return false end
 
-	local pl = managers.player and managers.player:player_unit()
+	local pl = api.player_unit()
 	local inv = pl and pl:inventory()
 
 	if not inv or not inv.equipped_selection then return false end
@@ -54,8 +54,10 @@ local function holstered(state, t)
 	return cfg.holster ~= nil and expire ~= nil and t >= expire
 end
 
+-- Hook-Fabriken (api.wrap) ----------------------------------------------
+
 local function make_reload_hook(orig)
-	local function hook(self, t, input)
+	return function(self, t, input)
 		if not cfg.enabled then
 			self._nqr_hold_t = nil
 			holster_release("refill")
@@ -77,6 +79,9 @@ local function make_reload_hook(orig)
 			end
 
 			if t >= self._nqr_hold_t then
+				-- Langes Halten: HUD zeigen, beim Loslassen NICHT nachladen.
+				self._nqr_held_long = true
+
 				api.set_panel(true)
 
 				-- Waehrend eines laufenden Nachladens nicht wegstecken, sonst
@@ -112,32 +117,13 @@ local function make_reload_hook(orig)
 
 		return orig(self, t, input)
 	end
-
-	return hook
-end
-
-local function ensure_reload_hook()
-	local PS = rawget(_G, "PlayerStandard")
-
-	if not PS or not PS._check_action_reload then return end
-	if PS._check_action_reload == cfg.reload_hook then return end
-
-	cfg.reload_hook = make_reload_hook(PS._check_action_reload)
-	PS._check_action_reload = cfg.reload_hook
 end
 
 -- NQR bricht ein Nachladen ab und laesst ggf. das (teilvolle) Magazin fallen
 -- (nqr_playerstandard.lua:2336). Danach den Vorrat aufraeumen, damit das am
 -- Boden liegende Magazin sofort aufhebbar wird.
-local function ensure_interupt_hook()
-	local PS = rawget(_G, "PlayerStandard")
-
-	if not PS or not PS._interupt_action_reload then return end
-	if PS._interupt_action_reload == cfg.interupt_hook then return end
-
-	local orig = PS._interupt_action_reload
-
-	cfg.interupt_hook = function(self, t, ...)
+local function make_interupt_hook(orig)
+	return function(self, t, ...)
 		local wep = api.equipped_base()
 		local ret = orig(self, t, ...)
 
@@ -147,213 +133,26 @@ local function ensure_interupt_hook()
 
 		return ret
 	end
-
-	PS._interupt_action_reload = cfg.interupt_hook
 end
 
-local PICKUP_RANGE = 250
-local PICKUP_HOLD = 1
-local AIM_RADIUS = 50
-local mvec_from = Vector3()
-local mvec_to = Vector3()
-local mvec_dir = Vector3()
-local mvec_v = Vector3()
-local mvec_closest = Vector3()
-
-local function bar_stop(complete)
-	holster_release("pickup")
-
-	if cfg.pickup_bar then
-		cfg.pickup_bar = nil
-		pcall(function() managers.hud:hide_interaction_bar(complete and true or false) end)
-	end
-end
-
-local function clear_pickup()
-	bar_stop(false)
-	if cfg.pickup_shown then
-		cfg.pickup_shown = nil
-		pcall(function() managers.hud:remove_interact() end)
-	end
-	cfg.pickup_tag = nil
-	cfg.pickup_t = nil
-end
-
-local function ensure_holster_hook()
-	local PS = rawget(_G, "PlayerStandard")
-
-	if not PS or not PS._update_equip_weapon_timers then return end
-	if PS._update_equip_weapon_timers == cfg.equip_timer_hook then return end
-
-	local orig = PS._update_equip_weapon_timers
-
-	cfg.equip_timer_hook = function(self, t, input)
+local function make_holster_hook(orig)
+	return function(self, t, input)
 		if cfg.holster and self._unequip_weapon_expire_t then
 			return -- Waffe bleibt unequipped, solange gepickt/aufgefuellt wird
 		end
 
 		return orig(self, t, input)
 	end
-
-	PS._update_equip_weapon_timers = cfg.equip_timer_hook
 end
 
-local function update_pickup(state, t, input)
-	for k, tag in pairs(api.dropped) do
-		if not alive(tag.col) then
-			api.dropped[k] = nil
-		end
-	end
-
-	if not cfg.enabled then
-		clear_pickup()
-		return
-	end
-
-	local pl = managers.player and managers.player:player_unit()
-	local cam = pl and pl:camera()
-	local pos = cam and cam:position()
-	local rot = cam and cam:rotation()
-
-	if not pos or not rot then
-		clear_pickup()
-		return
-	end
-
-	mvector3.set(mvec_from, pos)
-	mvector3.set(mvec_to, rot:y())
-	mvector3.multiply(mvec_to, PICKUP_RANGE)
-	mvector3.add(mvec_to, mvec_from)
-
-	local ray = World:raycast(mvec_from, mvec_to)
-	local hit_dist = ray and mvector3.distance(mvec_from, ray.position) or PICKUP_RANGE
-	local tag = ray and ray.unit and alive(ray.unit) and api.dropped[ray.unit:key()] or nil
-
-	if not tag then
-		mvector3.set(mvec_dir, mvec_to)
-		mvector3.subtract(mvec_dir, mvec_from)
-		mvector3.normalize(mvec_dir)
-
-		local best, best_along = nil, nil
-
-		for _, cand in pairs(api.dropped) do
-			if alive(cand.col) and api.can_pickup_dropped(cand) then
-				mvector3.set(mvec_v, cand.col:position())
-				mvector3.subtract(mvec_v, mvec_from)
-
-				local along = mvector3.dot(mvec_v, mvec_dir)
-
-				if along > 0 and along <= hit_dist then
-					mvector3.set(mvec_closest, mvec_dir)
-					mvector3.multiply(mvec_closest, along)
-					mvector3.subtract(mvec_v, mvec_closest)
-
-					local perp = mvector3.length(mvec_v)
-
-					if perp <= AIM_RADIUS and (not best_along or along < best_along) then
-						best = cand
-						best_along = along
-					end
-				end
-			end
-		end
-
-		tag = best
-	end
-
-	if not tag or not api.can_pickup_dropped(tag) then
-		clear_pickup()
-		return
-	end
-
-	if cfg.pickup_tag ~= tag then
-		cfg.pickup_tag = tag
-		cfg.pickup_shown = true
-
-		pcall(function()
-			managers.hud:show_interact({
-				text = managers.localization:btn_macro("interact", false) .. " Magazin aufheben"
-			})
-		end)
-	end
-
-	local ctrl = state._controller
-	local held = ctrl and ctrl.get_input_bool and ctrl:get_input_bool("interact")
-
-	if not held then
-		if cfg.pickup_t or cfg.holster == "pickup" then
-			bar_stop(false)
-			cfg.pickup_t = nil
-			cfg.pickup_tag = nil -- Prompt wird im naechsten Frame neu gezeigt
-		end
-		return
-	end
-
-	if not cfg.pickup_t then
-		-- Schusswaffe erst wegstecken, der Balken startet erst, wenn sie ganz unten ist.
-		-- Ohne Waffe in der Hand oder mit Melee gibt es nichts wegzustecken.
-		-- Nur echte Schusswaffen (Primaer/Sekundaer) werden weggesteckt; Melee nicht.
-		local base = api.equipped_base()
-		local inv = pl and pl:inventory()
-		local sel = inv and inv.equipped_selection and inv:equipped_selection()
-		local name_id = base and (base._name_id or (base.get_name_id and base:get_name_id()))
-		local melee_td = tweak_data and tweak_data.blackmarket and tweak_data.blackmarket.melee_weapons
-		local is_melee = (melee_td and name_id and melee_td[name_id] ~= nil)
-			or (base and base.get_ammo_remaining_in_clip == nil)
-			or (base and base._blueprint == nil)
-			or (state._is_meleeing and state:_is_meleeing())
-			or (sel ~= nil and sel ~= 1 and sel ~= 2)
-		local is_gun = base ~= nil and not is_melee
-		local in_hand = is_gun and state._unequip_weapon_expire_t == nil
-
-		local need_holster = cfg.holster == "pickup" or in_hand
-
-		if need_holster and (not holster_start(state, t, "pickup") or not holstered(state, t)) then return end
-
-		cfg.pickup_t = t
-		cfg.pickup_bar = true
-		managers.hud:show_interaction_bar(0, PICKUP_HOLD)
-	end
-
-	local progress = math.min(1, (t - cfg.pickup_t) / PICKUP_HOLD)
-	managers.hud:set_interaction_bar_width(progress * PICKUP_HOLD, PICKUP_HOLD)
-
-	if progress < 1 then return end
-
-	local ok = api.pickup_dropped(tag)
-	bar_stop(ok)
-	pcall(function() managers.hud:remove_interact() end)
-
-	if ok then
-		if alive(tag.col) then tag.col:set_slot(0) end
-		if alive(tag.mag) then tag.mag:set_slot(0) end
-
-		api.dropped[tag.key] = nil
-
-		pcall(function() pl:sound():play("pickup_ammo") end)
-
-		api.log("picked up dropped mag")
-	end
-
-	cfg.pickup_tag = nil
-	cfg.pickup_t = nil
-	cfg.pickup_shown = nil
-end
-
-local function ensure_hud_hook()
-	local TM = rawget(_G, "HUDTeammate")
-
-	if not TM or not TM.set_ammo_amount_by_type or TM.set_ammo_amount_by_type == cfg.hud_hook then return end
-
-	local orig = TM.set_ammo_amount_by_type
-
-	cfg.hud_hook = function(self, wtype, max_clip, current_clip, current_left, max, weapon_panel)
+local function make_hud_hook(orig)
+	return function(self, wtype, max_clip, current_clip, current_left, max, weapon_panel)
 		orig(self, wtype, max_clip, current_clip, current_left, max, weapon_panel)
 
 		local ok, err = pcall(function()
 			if self._id ~= HUDManager.PLAYER_PANEL then return end
 
-			local pl = managers.player and managers.player:player_unit()
+			local pl = api.player_unit()
 			local inv = pl and pl:inventory()
 			local unit = inv and inv:unit_by_selection(wtype == "primary" and 2 or 1)
 			local base = alive(unit) and unit:base() or nil
@@ -389,8 +188,217 @@ local function ensure_hud_hook()
 			api.log("hud mag count failed: " .. tostring(err))
 		end
 	end
+end
 
-	TM.set_ammo_amount_by_type = cfg.hud_hook
+local function install_hooks()
+	api.install_weapon_hooks()
+
+	api.wrap("PlayerStandard", "_update_equip_weapon_timers", make_holster_hook)
+	api.wrap("PlayerStandard", "_check_action_reload", make_reload_hook)
+	api.wrap("PlayerStandard", "_interupt_action_reload", make_interupt_hook)
+	api.wrap("HUDTeammate", "set_ammo_amount_by_type", make_hud_hook)
+end
+
+-- Magazin-Pickup ----------------------------------------------------------
+
+local PICKUP_RANGE = 250
+local PICKUP_HOLD = 1
+local AIM_RADIUS = 50
+local mvec_from = Vector3()
+local mvec_to = Vector3()
+local mvec_dir = Vector3()
+local mvec_v = Vector3()
+local mvec_closest = Vector3()
+
+local function bar_stop(complete)
+	holster_release("pickup")
+
+	if cfg.pickup_bar then
+		cfg.pickup_bar = nil
+		pcall(function() managers.hud:hide_interaction_bar(complete and true or false) end)
+	end
+end
+
+local function clear_pickup()
+	bar_stop(false)
+
+	if cfg.pickup_shown then
+		cfg.pickup_shown = nil
+		pcall(function() managers.hud:remove_interact() end)
+	end
+
+	cfg.pickup_tag = nil
+	cfg.pickup_t = nil
+end
+
+-- Echte Schusswaffe (Primaer/Sekundaer) in der Hand? Melee zaehlt nicht.
+local function firearm_in_hand(state, pl)
+	local base = api.equipped_base()
+
+	if not base or base.get_ammo_remaining_in_clip == nil or base._blueprint == nil then return false end
+	if state._is_meleeing and state:_is_meleeing() then return false end
+
+	local inv = pl and pl:inventory()
+	local sel = inv and inv.equipped_selection and inv:equipped_selection()
+
+	return sel == nil or sel == 1 or sel == 2
+end
+
+-- Liegendes Magazin im Blick: erst direkter Raycast-Treffer, sonst
+-- naechstes aufhebbares Magazin in einem kleinen Zielkegel.
+local function find_aimed_tag(pos, rot)
+	mvector3.set(mvec_from, pos)
+	mvector3.set(mvec_to, rot:y())
+	mvector3.multiply(mvec_to, PICKUP_RANGE)
+	mvector3.add(mvec_to, mvec_from)
+
+	local ray = World:raycast(mvec_from, mvec_to)
+	local hit_dist = ray and mvector3.distance(mvec_from, ray.position) or PICKUP_RANGE
+	local tag = ray and ray.unit and alive(ray.unit) and api.dropped[ray.unit:key()] or nil
+
+	if tag then return tag end
+
+	mvector3.set(mvec_dir, mvec_to)
+	mvector3.subtract(mvec_dir, mvec_from)
+	mvector3.normalize(mvec_dir)
+
+	local best, best_along = nil, nil
+
+	for _, cand in pairs(api.dropped) do
+		if alive(cand.col) and api.can_pickup_dropped(cand) then
+			mvector3.set(mvec_v, cand.col:position())
+			mvector3.subtract(mvec_v, mvec_from)
+
+			local along = mvector3.dot(mvec_v, mvec_dir)
+
+			if along > 0 and along <= hit_dist then
+				mvector3.set(mvec_closest, mvec_dir)
+				mvector3.multiply(mvec_closest, along)
+				mvector3.subtract(mvec_v, mvec_closest)
+
+				local perp = mvector3.length(mvec_v)
+
+				if perp <= AIM_RADIUS and (not best_along or along < best_along) then
+					best = cand
+					best_along = along
+				end
+			end
+		end
+	end
+
+	return best
+end
+
+local function update_pickup(state, t)
+	for k, tag in pairs(api.dropped) do
+		if not alive(tag.col) then
+			api.dropped[k] = nil
+		end
+	end
+
+	-- Nichts am Boden: kein Raycast noetig.
+	if not cfg.enabled or next(api.dropped) == nil then
+		clear_pickup()
+		return
+	end
+
+	local pl = api.player_unit()
+	local cam = pl and pl:camera()
+	local pos = cam and cam:position()
+	local rot = cam and cam:rotation()
+
+	if not pos or not rot then
+		clear_pickup()
+		return
+	end
+
+	local tag = find_aimed_tag(pos, rot)
+
+	if not tag or not api.can_pickup_dropped(tag) then
+		clear_pickup()
+		return
+	end
+
+	if cfg.pickup_tag ~= tag then
+		cfg.pickup_tag = tag
+		cfg.pickup_shown = true
+
+		pcall(function()
+			managers.hud:show_interact({
+				text = managers.localization:btn_macro("interact", false) .. " " .. api.L("nqr_mags_pickup", "Magazin aufheben")
+			})
+		end)
+	end
+
+	local ctrl = state._controller
+	local held = ctrl and ctrl.get_input_bool and ctrl:get_input_bool("interact")
+
+	if not held then
+		if cfg.pickup_t or cfg.holster == "pickup" then
+			bar_stop(false)
+			cfg.pickup_t = nil
+			cfg.pickup_tag = nil -- Prompt wird im naechsten Frame neu gezeigt
+		end
+
+		return
+	end
+
+	if not cfg.pickup_t then
+		-- Schusswaffe erst wegstecken, der Balken startet erst, wenn sie ganz unten ist.
+		local in_hand = firearm_in_hand(state, pl) and state._unequip_weapon_expire_t == nil
+		local need_holster = cfg.holster == "pickup" or in_hand
+
+		if need_holster and (not holster_start(state, t, "pickup") or not holstered(state, t)) then return end
+
+		cfg.pickup_t = t
+		cfg.pickup_bar = true
+		managers.hud:show_interaction_bar(0, PICKUP_HOLD)
+	end
+
+	local progress = math.min(1, (t - cfg.pickup_t) / PICKUP_HOLD)
+
+	managers.hud:set_interaction_bar_width(progress * PICKUP_HOLD, PICKUP_HOLD)
+
+	if progress < 1 then return end
+
+	local ok = api.pickup_dropped(tag)
+
+	bar_stop(ok)
+	pcall(function() managers.hud:remove_interact() end)
+
+	if ok then
+		if alive(tag.col) then tag.col:set_slot(0) end
+		if alive(tag.mag) then tag.mag:set_slot(0) end
+
+		api.dropped[tag.key] = nil
+
+		pcall(function() pl:sound():play("pickup_ammo") end)
+
+		api.log("picked up dropped mag")
+	end
+
+	cfg.pickup_tag = nil
+	cfg.pickup_t = nil
+	cfg.pickup_shown = nil
+end
+
+-- Pro-Frame-Hook ---------------------------------------------------------
+
+-- Haelt ammo_max und lose Munition der ausgeruesteten Waffe aktuell.
+local function prepare_weapon(base)
+	if base._nqr_mag_loose == nil then
+		api.loose_of(base)
+		api.refresh_hud()
+	end
+
+	if base.set_ammo_max then
+		local want = api.max_total(base)
+
+		if want and base:get_ammo_max() ~= want then
+			api.log("ammo_max " .. tostring(base:get_ammo_max()) .. " -> " .. tostring(want) .. " on " .. tostring(base._name_id))
+			base:set_ammo_max(want)
+		end
+	end
 end
 
 local function install_gameplay_hooks()
@@ -400,48 +408,28 @@ local function install_gameplay_hooks()
 
 	cfg.gameplay_installed = true
 
-	ensure_holster_hook()
-	ensure_reload_hook()
-	ensure_interupt_hook()
-	api.ensure_on_reload_hook()
-	api.ensure_stage_hook()
-	api.ensure_add_ammo_hook()
+	install_hooks()
 
 	local orig_get_input = PS._get_input
 
 	PS._get_input = function(self, t, dt, paused)
-		ensure_reload_hook()
-		ensure_interupt_hook()
-		api.ensure_on_reload_hook()
-		api.ensure_stage_hook()
-		api.ensure_add_ammo_hook()
-		api.ensure_drop_hook()
-		ensure_hud_hook()
-		api.ensure_bag_hooks()
-		api.ensure_need_ammo_hook()
+		install_hooks()
 
-		local base = api.equipped_base()
+		local before = api.equipped_base()
 
-		if base and not api.skip_weapon(base) and base._nqr_mag_loose == nil then
-			api.loose_of(base)
-			api.refresh_hud()
-		end
-
-		if base and not api.skip_weapon(base) and base.set_ammo_max then
-			local want = api.max_total(base)
-
-			if want and base:get_ammo_max() ~= want then
-				api.log("ammo_max " .. tostring(base:get_ammo_max()) .. " -> " .. tostring(want) .. " on " .. tostring(base._name_id))
-				base:set_ammo_max(want)
-			end
+		if before and not api.skip_weapon(before) then
+			prepare_weapon(before)
 		end
 
 		local input = orig_get_input(self, t, dt, paused)
 
+		-- Waffe kann sich im Original-Input geaendert haben: einmal neu bestimmen.
+		local base = api.equipped_base()
+		local applicable = base ~= nil and not api.skip_weapon(base)
+
 		-- Dauerhaft offenes Overlay: sichtbar, solange eine passende Waffe ausgeruestet ist.
 		if cfg.overlay_always and cfg.enabled then
-			local w = api.equipped_base()
-			local want = not paused and w ~= nil and not api.skip_weapon(w)
+			local want = not paused and applicable
 
 			if want ~= (cfg.panel_visible and true or false) then
 				api.set_panel(want)
@@ -455,7 +443,7 @@ local function install_gameplay_hooks()
 		if paused then
 			clear_pickup()
 		else
-			update_pickup(self, t, input)
+			update_pickup(self, t)
 		end
 
 		if not paused and cfg.panel_visible and (not rcfg.last_tick_t or rcfg.last_tick_t ~= t) then
@@ -465,9 +453,7 @@ local function install_gameplay_hooks()
 				api.tick(dt)
 			end
 
-			local base = api.equipped_base()
-
-			if base and not api.skip_weapon(base) then
+			if applicable then
 				local clip = base:get_ammo_remaining_in_clip()
 
 				if clip ~= cfg.last_clip then

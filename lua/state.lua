@@ -32,55 +32,59 @@ local function rdbg(...)
 	print_log("[nqr_magfill]", ...)
 end
 
-local MAGS_SETTINGS_KEYS = {
-	enabled = true,
-	max_extra_mags = true,
-	ammo_max = true,
-	max_boxes = true,
-	overlay_always = true,
-	show_mags = true,
-	show_loose = true,
-	show_more = true,
-	show_ammo_type = true,
-	font_size = true,
-	pad_right = true,
-	pad_bottom = true,
-	debug = true
+-- Einzige Quelle fuer Einstellungen: Key, Default, Menue-Eintrag.
+-- Settings-Keys, Defaults und das Menue (menu.lua) werden daraus abgeleitet.
+-- Menue-Texte kommen aus der Loc-Datei: <id>_title / <id>_desc.
+local MAGS_SCHEMA = {
+	{ key = "enabled", id = "nqr_mags_enabled", type = "toggle", default = true },
+	{ key = "max_extra_mags", id = "nqr_mags_max_extra", type = "slider", default = 0, min = 0, max = 2, step = 1, precision = 0 },
+	{ key = "ammo_max", id = "nqr_mags_ammo_max", type = "slider", default = 125, min = 100, max = 200, step = 5, precision = 0, percent = true },
+	{ key = "overlay_always", id = "nqr_mags_overlay_always", type = "toggle", default = false },
+	{ key = "show_mags", id = "nqr_mags_counts", type = "toggle", default = false },
+	{ key = "show_loose", id = "nqr_mags_loose", type = "toggle", default = true },
+	{ key = "show_ammo_type", id = "nqr_mags_ammo_type", type = "toggle", default = false },
+	{ key = "max_boxes", id = "nqr_mags_max_boxes", type = "slider", default = 4, min = 2, max = 24, step = 1, precision = 0 },
+	{ key = "show_more", id = "nqr_mags_more", type = "toggle", default = true },
+	{ key = "font_size", id = "nqr_mags_font", type = "slider", default = 20, min = 10, max = 28, step = 1, precision = 0 },
+	{ key = "pad_right", id = "nqr_mags_pad_right", type = "slider", default = 220, min = -100, max = 300, step = 2, precision = 0 },
+	{ key = "pad_bottom", id = "nqr_mags_pad_bottom", type = "slider", default = 100, min = -50, max = 400, step = 2, precision = 0 },
+	{ key = "debug", id = "nqr_mags_debug", type = "toggle", default = false }
 }
 
-local FILL_SETTINGS_KEYS = {
-	enabled = true,
-	round_interval = true,
-	sound = true,
-	unblock_bag = true,
-	debug = true
+local FILL_SCHEMA = {
+	{ key = "enabled", id = "nqr_magfill_enabled", type = "toggle", default = true },
+	{ key = "round_interval", id = "nqr_magfill_interval", type = "slider", default = 0.25, min = 0.02, max = 1, step = 0.01, precision = 2 },
+	{ key = "sound", id = "nqr_magfill_sound", type = "toggle", default = true },
+	{ key = "unblock_bag", id = "nqr_magfill_unblock", type = "toggle", default = true },
+	{ key = "debug", id = "nqr_magfill_debug", type = "toggle", default = false }
 }
 
-local MAGS_DEFAULTS = {
-	enabled = true,
-	max_extra_mags = 0,
-	ammo_max = 125,
-	max_boxes = 4,
-	overlay_always = false,
-	show_mags = false,
-	show_loose = true,
-	show_more = true,
-	show_ammo_type = false,
-	font_size = 20,
-	pad_right = 220,
-	pad_bottom = 100,
-	debug = false
-}
+local function schema_keys(schema)
+	local keys = {}
 
-local FILL_DEFAULTS = {
-	enabled = true,
-	round_interval = 0.25,
-	sound = true,
-	unblock_bag = true,
-	debug = false
-}
+	for i = 1, #schema do
+		keys[schema[i].key] = true
+	end
 
-local function load_settings(target, name, keys, log)
+	return keys
+end
+
+local function schema_defaults(schema)
+	local defaults = {}
+
+	for i = 1, #schema do
+		defaults[schema[i].key] = schema[i].default
+	end
+
+	return defaults
+end
+
+local MAGS_SETTINGS_KEYS = schema_keys(MAGS_SCHEMA)
+local FILL_SETTINGS_KEYS = schema_keys(FILL_SCHEMA)
+local MAGS_DEFAULTS = schema_defaults(MAGS_SCHEMA)
+local FILL_DEFAULTS = schema_defaults(FILL_SCHEMA)
+
+local function load_settings(target, name, keys, logf)
 	if target.settings_loaded then return end
 
 	target.settings_loaded = true
@@ -100,7 +104,7 @@ local function load_settings(target, name, keys, log)
 	local ok, data = pcall(json.decode, raw)
 
 	if not ok or type(data) ~= "table" then
-		log("settings file unreadable")
+		logf("settings file unreadable")
 		return
 	end
 
@@ -110,10 +114,10 @@ local function load_settings(target, name, keys, log)
 		end
 	end
 
-	log("settings loaded")
+	logf("settings loaded")
 end
 
-local function save_settings(target, name, keys, log)
+local function save_settings(target, name, keys, logf)
 	if not rawget(_G, "json") then return end
 
 	local data = {}
@@ -125,7 +129,7 @@ local function save_settings(target, name, keys, log)
 	local ok, encoded = pcall(json.encode, data)
 
 	if not ok then
-		log("settings encode failed")
+		logf("settings encode failed")
 		return
 	end
 
@@ -135,7 +139,7 @@ local function save_settings(target, name, keys, log)
 		file:write(encoded)
 		file:close()
 	else
-		log("settings file not writable")
+		logf("settings file not writable")
 	end
 end
 
@@ -154,16 +158,81 @@ end
 
 apply_defaults(cfg, MAGS_DEFAULTS)
 
-cfg.box_w = cfg.box_w or 20
-cfg.box_h = cfg.box_h or 28
-cfg.box_gap = cfg.box_gap or 4
 cfg.mags = cfg.mags or {}
 cfg.dropped = cfg.dropped or {}
 
 apply_defaults(rcfg, FILL_DEFAULTS)
 
+-- Hook-Helfer ------------------------------------------------------------
+-- Wickelt Klasse.funktion genau einmal ein. make(orig) liefert den Hook
+-- function(self, ...). Wird die Funktion spaeter von einem anderen Mod erneut
+-- ueberschrieben, wird neu eingewickelt; der busy-Guard verhindert dann, dass
+-- unser Hook doppelt in der Kette laeuft (z.B. Magazin doppelt in die Queue).
+cfg.hooks = cfg.hooks or {}
+
+local function wrap(class_name, fn_name, make)
+	local cls = rawget(_G, class_name)
+	local current = cls and cls[fn_name]
+
+	if not current then return false end
+
+	local key = class_name .. "." .. fn_name
+	local entry = cfg.hooks[key]
+
+	if entry and current == entry.hook then return true end
+
+	entry = entry or {}
+	cfg.hooks[key] = entry
+
+	local inner = make(current)
+
+	local function finish(ok, ...)
+		entry.busy = false
+
+		if not ok then
+			error((...), 0)
+		end
+
+		return ...
+	end
+
+	entry.hook = function(self, ...)
+		if entry.busy then
+			return current(self, ...)
+		end
+
+		entry.busy = true
+
+		return finish(pcall(inner, self, ...))
+	end
+
+	cls[fn_name] = entry.hook
+
+	return true
+end
+
+local function player_unit()
+	return managers.player and managers.player:player_unit()
+end
+
+-- Lokalisierter Text mit Fallback, falls der Key in der Loc-Datei fehlt.
+local function L(id, fallback)
+	local loc = managers.localization
+
+	if loc and loc.exists and loc:exists(id) then
+		return loc:text(id)
+	end
+
+	return fallback
+end
+
+-- Anzahl Zusatzmagazine aus den Einstellungen (nie negativ, ganzzahlig).
+local function extra_mags()
+	return math.max(0, math.floor(cfg.max_extra_mags or 0))
+end
+
 local function equipped_unit()
-	local unit = managers.player and managers.player:player_unit()
+	local unit = player_unit()
 
 	return unit and unit:inventory() and unit:inventory():equipped_unit()
 end
@@ -175,7 +244,7 @@ local function equipped_base()
 end
 
 local function is_ours(wep)
-	local unit = managers.player and managers.player:player_unit()
+	local unit = player_unit()
 	local setup = wep and wep._setup
 
 	if not alive(unit) or not setup or not alive(setup.user_unit) then return false end
@@ -183,12 +252,9 @@ local function is_ours(wep)
 	return setup.user_unit:key() == unit:key()
 end
 
-local function mag_part_id(wep)
-	local blueprint = wep._blueprint
+local function find_mag_part(blueprint)
 	local magazine = nil
 	local clip = nil
-
-	if not blueprint then return nil end
 
 	for i = 1, #blueprint do
 		local part = tweak_data.weapon.factory.parts[blueprint[i]]
@@ -212,6 +278,22 @@ local function mag_part_id(wep)
 	end
 
 	return clip or magazine
+end
+
+-- Wird pro Frame mehrfach gebraucht, daher an der Waffe gecacht
+-- (Blueprint-Identitaet + Laenge pruefen, falls sich die Teile aendern).
+local function mag_part_id(wep)
+	local blueprint = wep._blueprint
+
+	if not blueprint then return nil end
+
+	if wep._nqr_pid_bp ~= blueprint or wep._nqr_pid_n ~= #blueprint then
+		wep._nqr_pid = find_mag_part(blueprint) or false
+		wep._nqr_pid_bp = blueprint
+		wep._nqr_pid_n = #blueprint
+	end
+
+	return wep._nqr_pid or nil
 end
 
 local function mag_capacity(pid, caliber)
@@ -242,7 +324,7 @@ end
 local function chamber_of(wep)
 	if not wep or not wep.get_chamber then return 0 end
 
-	local ok, value = pcall(function() return wep:get_chamber() end)
+	local ok, value = pcall(wep.get_chamber, wep)
 
 	if ok and type(value) == "number" then
 		return value
@@ -310,7 +392,7 @@ local function queue_of(wep)
 			queue[#queue + 1] = new_mag(capacity)
 		end
 
-		for _ = 1, math.max(0, math.floor(cfg.max_extra_mags or 0)) do
+		for _ = 1, extra_mags() do
 			queue[#queue + 1] = new_mag(0)
 		end
 
@@ -431,7 +513,7 @@ local function max_total(wep)
 	local capacity = mag_capacity(pid, caliber)
 	local base = capacity + chamber_of(wep) + nqr_mag_amount(wep) * capacity
 
-	return math.floor(base * math.max(1, (cfg.ammo_max or 125) / 100))
+	return math.floor(base * math.max(1, cfg.ammo_max / 100))
 end
 
 local function skip_weapon(wep)
@@ -466,7 +548,7 @@ local function refresh_hud()
 end
 
 local function dropped_cap(tag)
-	return mag_amount_for(tag.pid, tag.caliber, tag.name_id) + math.max(0, math.floor(cfg.max_extra_mags or 0))
+	return mag_amount_for(tag.pid, tag.caliber, tag.name_id) + extra_mags()
 end
 
 local function can_pickup_dropped(tag)
@@ -507,9 +589,19 @@ local function pickup_dropped(tag)
 	return true
 end
 
+-- Beendet den Job, sobald alle Waffen abgearbeitet sind.
+local function job_done(job)
+	if job.index <= #job.list then return false end
+
+	rdbg("refill done, rounds filled=" .. tostring(job.filled))
+	rcfg.job = nil
+
+	return true
+end
+
 local function add_to_job(wep)
-	if rcfg.job and rcfg.job.index > #rcfg.job.list then
-		rcfg.job = nil
+	if rcfg.job then
+		job_done(rcfg.job)
 	end
 
 	if not rcfg.job then
@@ -554,7 +646,7 @@ local function fill_mags(wep, amount)
 	end
 
 	-- Fehlende Magazine neu anlegen (bis zum Maximum), sonst bleibt der Rest lose.
-	local max_mags = mag_amount_for(pid, caliber, wep._name_id) + math.max(0, math.floor(cfg.max_extra_mags or 0))
+	local max_mags = mag_amount_for(pid, caliber, wep._name_id) + extra_mags()
 
 	if wep._nqr_mag_gone then max_mags = max_mags + 1 end
 
@@ -597,11 +689,7 @@ local function fill_one_round()
 		end
 	end
 
-	if job.index > #job.list then
-		rdbg("refill done, rounds filled=" .. tostring(job.filled))
-		rcfg.job = nil
-		return
-	end
+	if job_done(job) then return end
 
 	local wep = job.list[job.index]
 	local queue, _, _, _, capacity = queue_of(wep)
@@ -654,7 +742,7 @@ local function fill_one_round()
 		rdbg("mag full " .. tostring(capacity) .. " loose=" .. tostring(loose_of(wep)) .. " rounds=" .. tostring(job.filled))
 
 		if rcfg.sound then
-			local unit = managers.player and managers.player:player_unit()
+			local unit = player_unit()
 
 			if unit and unit.sound then
 				pcall(function() unit:sound():play("pickup_ammo") end)
@@ -670,11 +758,7 @@ local function tick(dt)
 
 	if not job then return end
 
-	if job.index > #job.list then
-		rdbg("refill done, rounds filled=" .. tostring(job.filled))
-		rcfg.job = nil
-		return
-	end
+	if job_done(job) then return end
 
 	job.t = job.t + (dt or 0)
 
@@ -755,9 +839,14 @@ cfg.api.needs_fill = needs_fill
 cfg.api.save = function() save_settings(cfg, "nqr_mags_settings.txt", MAGS_SETTINGS_KEYS, dbg) end
 cfg.api.log = dbg
 cfg.api.defaults = MAGS_DEFAULTS
+cfg.api.schema = MAGS_SCHEMA
+cfg.api.wrap = wrap
+cfg.api.player_unit = player_unit
+cfg.api.L = L
 
 rcfg.api = rcfg.api or {}
 
 rcfg.api.save = function() save_settings(rcfg, "nqr_magfill_settings.txt", FILL_SETTINGS_KEYS, rdbg) end
 rcfg.api.log = rdbg
 rcfg.api.defaults = FILL_DEFAULTS
+rcfg.api.schema = FILL_SCHEMA

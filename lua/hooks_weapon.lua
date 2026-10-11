@@ -18,7 +18,7 @@ local function make_on_reload_hook(orig)
 			return orig(self, ...)
 		end
 
-		api.loose_of(self)
+		api.loose_of(self) -- initialisiert _nqr_mag_loose (Seiteneffekt)
 
 		local chamber = api.chamber_of(self)
 		local kept = math.max(0, math.min(chamber, self:get_ammo_remaining_in_clip()))
@@ -136,35 +136,8 @@ local function make_drop_hook(orig)
 	return hook
 end
 
-local function ensure_drop_hook()
-	local cls = rawget(_G, "NewRaycastWeaponBase")
-
-	if not cls or not cls.drop_magazine_object then return end
-	if cls.drop_magazine_object == cfg.drop_hook then return end
-
-	cfg.drop_hook = make_drop_hook(cls.drop_magazine_object)
-	cls.drop_magazine_object = cfg.drop_hook
-end
-
-local function ensure_on_reload_hook()
-	local cls = rawget(_G, "NewRaycastWeaponBase")
-
-	if not cls or not cls.on_reload then return end
-	if cls.on_reload == cfg.on_reload_hook then return end
-
-	cfg.on_reload_hook = make_on_reload_hook(cls.on_reload)
-	cls.on_reload = cfg.on_reload_hook
-end
-
-local function ensure_stage_hook()
-	local cls = rawget(_G, "NewRaycastWeaponBase")
-
-	if not cls or not cls.update_r_stage then return end
-	if cls.update_r_stage == cfg.stage_hook then return end
-
-	local orig = cls.update_r_stage
-
-	cfg.stage_hook = function(self, t)
+local function make_stage_hook(orig)
+	return function(self, t)
 		local ret = orig(self, t)
 
 		if not cfg.enabled or api.skip_weapon(self) then return ret end
@@ -185,38 +158,20 @@ local function ensure_stage_hook()
 
 		return ret
 	end
-
-	cls.update_r_stage = cfg.stage_hook
 end
 
-local function ensure_can_reload_hook()
-	local cls = rawget(_G, "NewRaycastWeaponBase")
-
-	if not cls or not cls.can_reload then return end
-	if cls.can_reload == cfg.can_reload_hook then return end
-
-	local orig = cls.can_reload
-
-	cfg.can_reload_hook = function(self, ...)
+local function make_can_reload_hook(orig)
+	return function(self, ...)
 		if cfg.enabled and not api.skip_weapon(self) then
 			api.sync_total(self)
 		end
 
 		return orig(self, ...)
 	end
-
-	cls.can_reload = cfg.can_reload_hook
 end
 
-local function ensure_add_ammo_hook()
-	local cls = rawget(_G, "RaycastWeaponBase")
-
-	if not cls or not cls.add_ammo then return end
-	if cls.add_ammo == cfg.add_ammo_hook then return end
-
-	local orig = cls.add_ammo
-
-	cfg.add_ammo_hook = function(self, ratio, add_amount_override)
+local function make_add_ammo_hook(orig)
+	return function(self, ratio, add_amount_override)
 		if api.skip_weapon(self) then
 			return orig(self, ratio, add_amount_override)
 		end
@@ -262,27 +217,18 @@ local function ensure_add_ammo_hook()
 
 		return true, add_amount
 	end
-
-	cls.add_ammo = cfg.add_ammo_hook
 end
 
-local function ensure_bag_hooks()
-	local cls = rawget(_G, "RaycastWeaponBase")
-
-	if not cls or not cls.add_ammo_from_bag then return end
-	if cls.add_ammo_from_bag == rcfg.bag_hook then return end
-
-	local orig_add_ammo_from_bag = cls.add_ammo_from_bag
-
-	local function hook(self, available, special)
+local function make_bag_hook(orig)
+	return function(self, available, special)
 		if not rcfg.enabled or api.skip_weapon(self) then
-			return orig_add_ammo_from_bag(self, available, special)
+			return orig(self, available, special)
 		end
 
 		api.sync_total(self)
 
 		local before = self:get_ammo_total()
-		local ret = orig_add_ammo_from_bag(self, available, special)
+		local ret = orig(self, available, special)
 		local added = self:get_ammo_total() - before
 
 		if added > 0 then
@@ -290,9 +236,7 @@ local function ensure_bag_hooks()
 			-- Lose Munition wird mit eingerechnet und zu vollen Magazinen gepackt.
 			local left = api.fill_mags(self, added + api.loose_of(self))
 
-			api.set_loose(self, 0)
-
-			api.set_loose(self, api.loose_of(self) + left)
+			api.set_loose(self, left)
 			api.sync_total(self)
 			cfg.panel_dirty = true
 			api.refresh_hud()
@@ -303,26 +247,16 @@ local function ensure_bag_hooks()
 
 		return ret
 	end
-
-	rcfg.bag_hook = hook
-	cls.add_ammo_from_bag = hook
 end
 
-local function ensure_need_ammo_hook()
-	local cls = rawget(_G, "PlayerInventory")
-
-	if not cls or not cls.need_ammo then return end
-	if cls.need_ammo == rcfg.need_ammo_hook then return end
-
-	local orig = cls.need_ammo
-
-	rcfg.need_ammo_hook = function(self)
+local function make_need_ammo_hook(orig)
+	return function(self)
 		if orig(self) then
 			return true
 		end
 
 		if rcfg.enabled and rcfg.unblock_bag then
-			local player = managers.player and managers.player:player_unit()
+			local player = api.player_unit()
 
 			if player and player:inventory() == self and api.magazines_need_fill(player) then
 				return true
@@ -331,25 +265,20 @@ local function ensure_need_ammo_hook()
 
 		return false
 	end
-
-	cls.need_ammo = rcfg.need_ammo_hook
 end
 
+-- Idempotent und billig: wird beim Laden und danach pro Frame aus hooks_player
+-- aufgerufen, falls ein anderes Mod die Funktionen spaeter ueberschreibt.
 local function install_weapon_hooks()
-	ensure_can_reload_hook()
-	ensure_on_reload_hook()
-	ensure_stage_hook()
-	ensure_add_ammo_hook()
-	ensure_drop_hook()
-	ensure_bag_hooks()
-	ensure_need_ammo_hook()
+	api.wrap("NewRaycastWeaponBase", "can_reload", make_can_reload_hook)
+	api.wrap("NewRaycastWeaponBase", "on_reload", make_on_reload_hook)
+	api.wrap("NewRaycastWeaponBase", "update_r_stage", make_stage_hook)
+	api.wrap("NewRaycastWeaponBase", "drop_magazine_object", make_drop_hook)
+	api.wrap("RaycastWeaponBase", "add_ammo", make_add_ammo_hook)
+	api.wrap("RaycastWeaponBase", "add_ammo_from_bag", make_bag_hook)
+	api.wrap("PlayerInventory", "need_ammo", make_need_ammo_hook)
 end
 
-cfg.api.ensure_on_reload_hook = ensure_on_reload_hook
-cfg.api.ensure_stage_hook = ensure_stage_hook
-cfg.api.ensure_add_ammo_hook = ensure_add_ammo_hook
-cfg.api.ensure_drop_hook = ensure_drop_hook
-cfg.api.ensure_bag_hooks = ensure_bag_hooks
-cfg.api.ensure_need_ammo_hook = ensure_need_ammo_hook
+api.install_weapon_hooks = install_weapon_hooks
 
 install_weapon_hooks()
