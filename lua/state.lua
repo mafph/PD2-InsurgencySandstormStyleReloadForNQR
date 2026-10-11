@@ -183,7 +183,8 @@ end
 
 local function mag_part_id(wep)
 	local blueprint = wep._blueprint
-	local fallback = nil
+	local magazine = nil
+	local clip = nil
 
 	if not blueprint then return nil end
 
@@ -191,15 +192,24 @@ local function mag_part_id(wep)
 		local part = tweak_data.weapon.factory.parts[blueprint[i]]
 
 		if part then
-			if part.type == "magazine" then
-				return blueprint[i]
-			elseif not fallback and part.stats and part.stats.CLIP_AMMO_MAX then
-				fallback = blueprint[i]
+			local has_clip = part.stats and part.stats.CLIP_AMMO_MAX
+
+			if has_clip then
+				-- Teil mit CLIP_AMMO_MAX bevorzugen: bei Revolvern (z.B. model3)
+				-- traegt das Magazin-Slot-Teil (m_bullets/m_body) keine Kapazitaet,
+				-- die echte Kapazitaet steht auf dem Zylinder.
+				if part.type == "magazine" then
+					return blueprint[i]
+				end
+
+				clip = clip or blueprint[i]
+			elseif part.type == "magazine" and not magazine then
+				magazine = blueprint[i]
 			end
 		end
 	end
 
-	return fallback
+	return clip or magazine
 end
 
 local function mag_capacity(pid, caliber)
