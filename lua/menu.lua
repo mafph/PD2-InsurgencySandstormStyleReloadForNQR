@@ -52,6 +52,14 @@ local MAGS_ITEMS = {
 	},
 	{
 		type = "toggle",
+		id = "nqr_mags_overlay_always",
+		title = "nqr_mags_overlay_always_title",
+		desc = "nqr_mags_overlay_always_desc",
+		callback = "nqr_mags_overlay_always_callback",
+		data_key = "overlay_always"
+	},
+	{
+		type = "toggle",
 		id = "nqr_mags_counts",
 		title = "nqr_mags_counts_title",
 		desc = "nqr_mags_counts_desc",

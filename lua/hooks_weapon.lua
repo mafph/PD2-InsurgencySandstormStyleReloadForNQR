@@ -23,49 +23,48 @@ local function make_on_reload_hook(orig)
 		local chamber = api.chamber_of(self)
 		local kept = math.max(0, math.min(chamber, self:get_ammo_remaining_in_clip()))
 
-		if self._nqr_mags_staged then
-			-- Uebernahme schon in den NQR-Stufen (r_mag_out/r_get_new_mag_in) passiert.
-			self._nqr_mags_staged = nil
-		else
-			local drops = self._nqr_drop_count or 0
+		local drops = self._nqr_drop_count or 0
+		local clip = self:get_ammo_remaining_in_clip()
 
-			self._nqr_drop_count = 0
+		self._nqr_drop_count = 0
 
-			local clip = self:get_ammo_remaining_in_clip()
+		dbg("reload: clip=" .. tostring(clip) .. " chamber=" .. tostring(chamber) .. " drops=" .. tostring(drops)
+			.. " loose=" .. tostring(api.loose_of(self)) .. " queue=" .. tostring(#queue))
 
-			dbg("reload: clip=" .. tostring(clip) .. " chamber=" .. tostring(chamber) .. " drops=" .. tostring(drops)
-				.. " loose=" .. tostring(api.loose_of(self)) .. " queue=" .. tostring(#queue))
+		local gone = self._nqr_mag_gone
 
-			if drops < 1 then
-				local old_mag = self._nqr_mag_installed
-				local actual = math.max(0, clip - chamber)
+		self._nqr_mag_gone = nil
 
-				if not old_mag then
-					old_mag = api.new_mag(actual)
-					dbg("reload: no installed mag recorded, created rounds=" .. tostring(actual))
-				else
-					-- .rounds wird nur beim Einsetzen/HUD aktualisiert: nach Schuessen ist der Wert veraltet.
-					if (old_mag.rounds or 0) ~= actual then
-						dbg("reload: stale mag rounds " .. tostring(old_mag.rounds) .. " -> " .. tostring(actual)
-							.. " (clip=" .. tostring(clip) .. " chamber=" .. tostring(chamber) .. ")")
-					end
+		if drops < 1 and not gone then
+			local old_mag = self._nqr_mag_installed
+			-- In r_mag_out erfasste Restmunition hat Vorrang: nach do_magdrop
+			-- entspricht clip - chamber nicht mehr dem alten Magazin.
+			local actual = self._nqr_mag_left_rounds
 
-					old_mag.rounds = actual
-				end
-
-				queue[#queue + 1] = old_mag
+			if actual == nil then
+				actual = math.max(0, clip - chamber)
 			end
 
-			api.sort_queue(queue)
+			if not old_mag then
+				old_mag = api.new_mag(actual)
+				dbg("reload: no installed mag recorded, created rounds=" .. tostring(actual))
+			else
+				old_mag.rounds = actual
+			end
 
-			local next_mag = table.remove(queue, 1)
-
-			self._nqr_mag_installed = next_mag or api.new_mag(0)
+			queue[#queue + 1] = old_mag
 		end
 
 		self._nqr_mag_left_rounds = nil
 
-		local installed = self._nqr_mag_installed or api.new_mag(0)
+		api.sort_queue(queue)
+
+		local next_mag = table.remove(queue, 1)
+
+		self._nqr_mag_installed = next_mag or api.new_mag(0)
+		self._nqr_no_mag = nil
+
+		local installed = self._nqr_mag_installed
 		local total = (installed.rounds or 0) + kept
 
 		self:set_ammo_total(total)
@@ -287,11 +286,19 @@ local function ensure_bag_hooks()
 		local added = self:get_ammo_total() - before
 
 		if added > 0 then
-			api.set_loose(self, api.loose_of(self) + added)
+			-- Munitionstasche fuellt direkt Magazine; nur der Rest bleibt lose.
+			-- Lose Munition wird mit eingerechnet und zu vollen Magazinen gepackt.
+			local left = api.fill_mags(self, added + api.loose_of(self))
+
+			api.set_loose(self, 0)
+
+			api.set_loose(self, api.loose_of(self) + left)
 			api.sync_total(self)
+			cfg.panel_dirty = true
+			api.refresh_hud()
 
 			rdbg("bag gave " .. tostring(added) .. " to " .. tostring(self._name_id)
-				.. " loose=" .. tostring(api.loose_of(self)))
+				.. " into mags, loose=" .. tostring(api.loose_of(self)))
 		end
 
 		return ret

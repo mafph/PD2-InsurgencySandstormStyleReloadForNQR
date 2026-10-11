@@ -79,8 +79,11 @@ local function make_reload_hook(orig)
 			if t >= self._nqr_hold_t then
 				api.set_panel(true)
 
-				-- Refill nur bei weggesteckter Waffe
-				if api.loose_of(wep) > 0 and api.needs_fill(wep) then
+				-- Waehrend eines laufenden Nachladens nicht wegstecken, sonst
+				-- bricht der Reload ab (ammocount bleibt leer).
+				local reloading = self._state_data and self._state_data.reload_expire_t
+
+				if not reloading and api.loose_of(wep) > 0 and api.needs_fill(wep) then
 					if holster_start(self, t, "refill") and holstered(self, t) then
 						api.add_to_job(wep)
 					end
@@ -94,11 +97,12 @@ local function make_reload_hook(orig)
 
 		holster_release("refill")
 
-		local tap = self._nqr_hold_t ~= nil and not cfg.panel_visible
+		local tap = self._nqr_hold_t ~= nil and not self._nqr_held_long
 
 		self._nqr_hold_t = nil
+		self._nqr_held_long = nil
 
-		if cfg.panel_visible then
+		if cfg.panel_visible and not cfg.overlay_always then
 			api.set_panel(false)
 		end
 
@@ -120,6 +124,31 @@ local function ensure_reload_hook()
 
 	cfg.reload_hook = make_reload_hook(PS._check_action_reload)
 	PS._check_action_reload = cfg.reload_hook
+end
+
+-- NQR bricht ein Nachladen ab und laesst ggf. das (teilvolle) Magazin fallen
+-- (nqr_playerstandard.lua:2336). Danach den Vorrat aufraeumen, damit das am
+-- Boden liegende Magazin sofort aufhebbar wird.
+local function ensure_interupt_hook()
+	local PS = rawget(_G, "PlayerStandard")
+
+	if not PS or not PS._interupt_action_reload then return end
+	if PS._interupt_action_reload == cfg.interupt_hook then return end
+
+	local orig = PS._interupt_action_reload
+
+	cfg.interupt_hook = function(self, t, ...)
+		local wep = api.equipped_base()
+		local ret = orig(self, t, ...)
+
+		if cfg.enabled and wep and not api.skip_weapon(wep) then
+			api.reload_interrupted(wep)
+		end
+
+		return ret
+	end
+
+	PS._interupt_action_reload = cfg.interupt_hook
 end
 
 local PICKUP_RANGE = 250
@@ -262,7 +291,17 @@ local function update_pickup(state, t, input)
 
 	if not cfg.pickup_t then
 		-- Erst Waffe wegstecken, der Balken startet erst, wenn sie ganz unten ist.
-		if not holster_start(state, t, "pickup") or not holstered(state, t) then return end
+		-- Ohne Waffe in der Hand (nichts ausgeruestet / bereits weggesteckt)
+		-- gibt es nichts wegzustecken.
+		-- Nur Primaer-/Sekundaerwaffen werden weggesteckt; Melee o.ae. nicht.
+		local base = api.equipped_base()
+		local inv = pl and pl:inventory()
+		local sel = inv and inv.equipped_selection and inv:equipped_selection()
+		local is_gun = base ~= nil and (sel == 1 or sel == 2) and base.ammo_info ~= nil
+		local in_hand = is_gun and state._unequip_weapon_expire_t == nil
+		local need_holster = cfg.holster == "pickup" or in_hand
+
+		if need_holster and (not holster_start(state, t, "pickup") or not holstered(state, t)) then return end
 
 		cfg.pickup_t = t
 		cfg.pickup_bar = true
@@ -356,6 +395,7 @@ local function install_gameplay_hooks()
 
 	ensure_holster_hook()
 	ensure_reload_hook()
+	ensure_interupt_hook()
 	api.ensure_on_reload_hook()
 	api.ensure_stage_hook()
 	api.ensure_add_ammo_hook()
@@ -364,6 +404,7 @@ local function install_gameplay_hooks()
 
 	PS._get_input = function(self, t, dt, paused)
 		ensure_reload_hook()
+		ensure_interupt_hook()
 		api.ensure_on_reload_hook()
 		api.ensure_stage_hook()
 		api.ensure_add_ammo_hook()
@@ -389,6 +430,16 @@ local function install_gameplay_hooks()
 		end
 
 		local input = orig_get_input(self, t, dt, paused)
+
+		-- Dauerhaft offenes Overlay: sichtbar, solange eine passende Waffe ausgeruestet ist.
+		if cfg.overlay_always and cfg.enabled then
+			local w = api.equipped_base()
+			local want = not paused and w ~= nil and not api.skip_weapon(w)
+
+			if want ~= (cfg.panel_visible and true or false) then
+				api.set_panel(want)
+			end
+		end
 
 		if cfg.holster == "refill" and not reload_held(self) then
 			holster_release("refill")

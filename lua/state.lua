@@ -336,37 +336,54 @@ local function mag_left(wep)
 	wep._nqr_mag_left_rounds = rounds
 	wep._nqr_mag_installed = new_mag(0)
 	wep._nqr_drop_count = 0
+	wep._nqr_no_mag = true
 
 	cfg.panel_dirty = true
 
 	dbg("stage mag out rounds=" .. tostring(rounds) .. " on " .. tostring(wep._name_id))
 end
 
--- NQR-Stufe r_get_new_mag_in: neues Magazin geht rein.
+-- NQR-Stufe r_get_new_mag_in: neues Magazin geht rein. Der eigentliche Tausch
+-- (altes Magazin zurueck in die Queue, naechstes entnehmen) passiert bewusst
+-- erst in on_reload (nach abgeschlossenem Nachladen). Wuerde hier getauscht,
+-- verschluckt ein abgebrochenes/erneut angestossenes Nachladen Magazine,
+-- ohne dass das Hauptmagazin gefuellt wird.
 local function mag_entered(wep)
+	wep._nqr_no_mag = nil
+	cfg.panel_dirty = true
+	dbg("stage mag in on " .. tostring(wep._name_id))
+end
+
+-- Nachladen wurde abgebrochen. NQR laesst dabei ggf. ein (teilvolles) Magazin
+-- fallen (nqr_playerstandard.lua:2336). In dem Fall laeuft r_get_new_mag_in nie,
+-- also muss hier aufgeraeumt werden: das fallengelassene Magazin fehlt im Vorrat.
+local function reload_interrupted(wep)
+	if not wep._nqr_mag_left_rounds and (wep._nqr_drop_count or 0) < 1 then return end
+
 	local queue = queue_of(wep)
-
-	if not queue then return end
-
 	local drops = wep._nqr_drop_count or 0
 
 	wep._nqr_drop_count = 0
-
-	if drops < 1 and wep._nqr_mag_left_rounds then
-		queue[#queue + 1] = new_mag(wep._nqr_mag_left_rounds)
-		sort_queue(queue)
-	end
-
 	wep._nqr_mag_left_rounds = nil
-	wep._nqr_mags_staged = true
-
-	local next_mag = table.remove(queue, 1)
-
-	wep._nqr_mag_installed = next_mag or new_mag(0)
 
 	cfg.panel_dirty = true
 
-	dbg("stage mag in installed=" .. tostring(wep._nqr_mag_installed.rounds) .. " queue=" .. tostring(#queue))
+	if not queue then return end
+
+	if drops >= 1 then
+		-- Das eingesteckte Magazin liegt am Boden; die Queue enthaelt es nicht
+		-- (nur Reserve), also bleibt sie unveraendert. Waffe ist leer.
+		wep._nqr_no_mag = true
+		wep._nqr_mag_gone = true
+		wep._nqr_mag_installed = new_mag(0)
+	else
+		-- Kein Drop: das (teilvolle) Magazin steckt weiterhin in der Waffe.
+		wep._nqr_mag_installed = new_mag(math.max(0, wep:get_ammo_remaining_in_clip() - chamber_of(wep)))
+		wep._nqr_no_mag = nil
+		wep._nqr_mag_gone = nil
+	end
+
+	dbg("reload interrupted drops=" .. tostring(drops) .. " queue=" .. tostring(#queue))
 end
 
 local sync_total
@@ -455,7 +472,15 @@ local function can_pickup_dropped(tag)
 
 	if not queue then return false end
 
-	return #queue < dropped_cap(tag)
+	local cap = dropped_cap(tag)
+	local wep = equipped_base()
+
+	-- Ohne Magazin in der Waffe zaehlt der Platz fuer das eingesteckte mit.
+	if wep and wep._nqr_mag_gone and queue_of(wep) == queue then
+		cap = cap + 1
+	end
+
+	return #queue < cap
 end
 
 local function pickup_dropped(tag)
@@ -464,6 +489,12 @@ local function pickup_dropped(tag)
 	local queue = cfg.mags[tag.queue_key]
 
 	queue[#queue + 1] = new_mag(tag.rounds or 0)
+
+	local wep = equipped_base()
+
+	if wep and queue_of(wep) == queue then
+		sync_total(wep)
+	end
 
 	dbg("picked up mag rounds=" .. tostring(tag.rounds or 0) .. " key=" .. tostring(tag.queue_key)
 		.. " queue=" .. tostring(#queue))
@@ -597,7 +628,7 @@ local function needs_fill(wep)
 		if capacity - (queue[i].rounds or 0) > 0 then return true end
 	end
 
-	return false
+	return installed_room(wep, capacity) > 0
 end
 
 local function magazines_need_fill(player)
@@ -639,6 +670,7 @@ cfg.api.queue_of = queue_of
 cfg.api.sort_queue = sort_queue
 cfg.api.mag_left = mag_left
 cfg.api.mag_entered = mag_entered
+cfg.api.reload_interrupted = reload_interrupted
 cfg.api.skip_weapon = skip_weapon
 cfg.api.new_mag = new_mag
 cfg.api.chamber_of = chamber_of
@@ -649,6 +681,7 @@ cfg.api.dropped = cfg.dropped
 cfg.api.can_pickup_dropped = can_pickup_dropped
 cfg.api.pickup_dropped = pickup_dropped
 cfg.api.add_to_job = add_to_job
+cfg.api.fill_mags = fill_mags
 cfg.api.tick = tick
 cfg.api.magazines_need_fill = magazines_need_fill
 cfg.api.needs_fill = needs_fill

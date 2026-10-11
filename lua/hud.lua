@@ -31,6 +31,7 @@ local function panel_rows()
 		capacity = capacity,
 		full = capacity,
 		installed = installed,
+		no_mag = wep._nqr_no_mag and true or false,
 		loose = api.loose_of(wep)
 	}
 end
@@ -133,28 +134,73 @@ local function build_panel(rows)
 			})
 		end
 
-		panel:rect({
-			name = "nqr_mag_box_" .. i,
-			x = x,
-			y = y,
-			w = cfg.box_w,
-			h = cfg.box_h,
-			layer = 10,
-			color = BOX_COLOR
-		})
+		if i == 1 and rows.no_mag then
+			-- Kein Magazin in der Waffe: gestrichelter Rahmen + X
+			local dash, gap, t = 4, 3, 2
+			local function dashes(name, x0, y0, len, horizontal)
+				local pos, n = 0, 0
 
-		if ratio > 0 then
-			local fh = math.max(2, (cfg.box_h - 4) * ratio)
+				while pos < len do
+					local l = math.min(dash, len - pos)
 
-			panel:rect({
-				name = "nqr_mag_fill_" .. i,
-				x = x + 2,
-				y = y + cfg.box_h - 2 - fh,
-				w = cfg.box_w - 4,
-				h = fh,
-				layer = 11,
-				color = FILL_COLOR
+					panel:rect({
+						name = name .. n,
+						x = horizontal and (x0 + pos) or x0,
+						y = horizontal and y0 or (y0 + pos),
+						w = horizontal and l or t,
+						h = horizontal and t or l,
+						layer = 11,
+						color = LINE_COLOR
+					})
+
+					pos = pos + dash + gap
+					n = n + 1
+				end
+			end
+
+			dashes("nqr_mag_dash_t", x, y, cfg.box_w, true)
+			dashes("nqr_mag_dash_b", x, y + cfg.box_h - t, cfg.box_w, true)
+			dashes("nqr_mag_dash_l", x, y, cfg.box_h, false)
+			dashes("nqr_mag_dash_r", x + cfg.box_w - t, y, cfg.box_h, false)
+
+			panel:text({
+				name = "nqr_mag_x",
+				x = x,
+				y = y,
+				w = cfg.box_w,
+				h = cfg.box_h,
+				layer = 13,
+				color = LINE_COLOR,
+				font = FONT,
+				font_size = math.min(cfg.font_size, cfg.box_h),
+				text = "X",
+				vertical = "center",
+				align = "center"
 			})
+		else
+			panel:rect({
+				name = "nqr_mag_box_" .. i,
+				x = x,
+				y = y,
+				w = cfg.box_w,
+				h = cfg.box_h,
+				layer = 10,
+				color = BOX_COLOR
+			})
+
+			if ratio > 0 then
+				local fh = math.max(2, (cfg.box_h - 4) * ratio)
+
+				panel:rect({
+					name = "nqr_mag_fill_" .. i,
+					x = x + 2,
+					y = y + cfg.box_h - 2 - fh,
+					w = cfg.box_w - 4,
+					h = fh,
+					layer = 11,
+					color = FILL_COLOR
+				})
+			end
 		end
 	end
 
@@ -181,7 +227,11 @@ local function build_panel(rows)
 		local text = nil
 
 		if cfg.show_mags then
-			text = "NEXT " .. tostring(list[1] and list[1].rounds or 0) .. "/" .. tostring(rows.full)
+			if rows.no_mag then
+				text = "KEIN MAG"
+			else
+				text = "NEXT " .. tostring(list[1] and list[1].rounds or 0) .. "/" .. tostring(rows.full)
+			end
 
 			if cfg.show_ammo_type then
 				text = text .. "    " .. tostring(rows.caliber)
@@ -209,6 +259,12 @@ local function build_panel(rows)
 	return panel
 end
 
+local function rebuild_panel(rows)
+	remove_panel()
+	cfg.panel = build_panel(rows)
+	cfg.panel_visible = cfg.panel ~= nil
+end
+
 local function set_panel(want)
 	if want == cfg.panel_visible then return end
 
@@ -222,9 +278,7 @@ local function set_panel(want)
 
 	if not rows then return end
 
-	remove_panel()
-	cfg.panel = build_panel(rows)
-	cfg.panel_visible = cfg.panel ~= nil
+	rebuild_panel(rows)
 end
 
 local function refresh_panel()
@@ -234,9 +288,7 @@ local function refresh_panel()
 
 	if not rows then return end
 
-	remove_panel()
-	cfg.panel = build_panel(rows)
-	cfg.panel_visible = cfg.panel ~= nil
+	rebuild_panel(rows)
 end
 
 cfg.api.set_panel = set_panel
