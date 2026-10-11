@@ -1,4 +1,5 @@
--- Einstieg: laedt die Teildateien in Lesereihenfolge.
+-- Einstieg (playerstandard-Hook): laedt die Spiel-Teile. state.lua kommt schon
+-- ueber menu.lua (menumanager-Hook), der vor dem Spiel laeuft.
 
 local dir = rawget(_G, "ModPath")
 
@@ -12,11 +13,9 @@ if dir ~= "" and not dir:match("[/\\]$") then
 end
 
 local PARTS = {
-	"state",
 	"hud",
 	"hooks_weapon",
-	"hooks_player",
-	"menu"
+	"hooks_player"
 }
 
 for i = 1, #PARTS do

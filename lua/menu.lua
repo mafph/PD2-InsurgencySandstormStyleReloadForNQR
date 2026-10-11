@@ -1,3 +1,6 @@
+-- Einstieg (menumanager-Hook): laedt zuerst den gemeinsamen Zustand.
+dofile(ModPath .. "lua/state.lua")
+
 local cfg = rawget(_G, "NQR_MAGS")
 local rcfg = rawget(_G, "NQR_MAGFILL")
 local dbg = cfg.api.log
