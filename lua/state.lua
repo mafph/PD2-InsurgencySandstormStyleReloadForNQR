@@ -37,6 +37,7 @@ local MAGS_SETTINGS_KEYS = {
 	max_extra_mags = true,
 	ammo_max = true,
 	max_boxes = true,
+	overlay_always = true,
 	show_mags = true,
 	show_loose = true,
 	show_more = true,
@@ -60,6 +61,7 @@ local MAGS_DEFAULTS = {
 	max_extra_mags = 0,
 	ammo_max = 125,
 	max_boxes = 4,
+	overlay_always = false,
 	show_mags = false,
 	show_loose = true,
 	show_more = true,
@@ -528,6 +530,57 @@ local function add_to_job(wep)
 	rdbg("queued " .. tostring(wep._name_id) .. " for refill")
 end
 
+-- Platz im Magazin, das in der Waffe steckt (0 wenn keins drin ist).
+local function installed_room(wep, capacity)
+	if wep._nqr_no_mag or wep._nqr_mag_gone then return 0 end
+
+	local rounds = math.max(0, wep:get_ammo_remaining_in_clip() - chamber_of(wep))
+
+	return math.max(0, capacity - rounds)
+end
+
+-- Verteilt Munition direkt auf Magazine: erst die Queue, zuletzt das Magazin
+-- in der Waffe. Gibt zurueck, was nicht mehr reinpasst (bleibt lose).
+local function fill_mags(wep, amount)
+	local queue, _, pid, caliber, capacity = queue_of(wep)
+
+	if not queue or not capacity or amount <= 0 then return amount end
+
+	for i = 1, #queue do
+		local take = math.min(amount, math.max(0, capacity - (queue[i].rounds or 0)))
+
+		queue[i].rounds = (queue[i].rounds or 0) + take
+		amount = amount - take
+	end
+
+	-- Fehlende Magazine neu anlegen (bis zum Maximum), sonst bleibt der Rest lose.
+	local max_mags = mag_amount_for(pid, caliber, wep._name_id) + math.max(0, math.floor(cfg.max_extra_mags or 0))
+
+	if wep._nqr_mag_gone then max_mags = max_mags + 1 end
+
+	while amount > 0 and #queue < max_mags do
+		local take = math.min(amount, capacity)
+
+		queue[#queue + 1] = new_mag(take)
+		amount = amount - take
+	end
+
+	local take = math.min(amount, installed_room(wep, capacity))
+
+	if take > 0 then
+		local installed = wep._nqr_mag_installed or new_mag(0)
+
+		wep:set_ammo_remaining_in_clip(wep:get_ammo_remaining_in_clip() + take)
+		installed.rounds = math.max(0, wep:get_ammo_remaining_in_clip() - chamber_of(wep))
+		wep._nqr_mag_installed = installed
+		amount = amount - take
+	end
+
+	sort_queue(queue)
+
+	return amount
+end
+
 -- Fuellt pro Aufruf genau eine Patrone aus den losen Patronen ins naechste nicht volle Magazin.
 local function fill_one_round()
 	local job = rcfg.job
@@ -567,12 +620,26 @@ local function fill_one_round()
 		end
 	end
 
+	local into_gun = false
+
+	-- Zuletzt das Magazin in der Waffe auffuellen.
+	if not target and installed_room(wep, capacity) > 0 then
+		into_gun = true
+		target = wep._nqr_mag_installed or new_mag(0)
+		wep._nqr_mag_installed = target
+	end
+
 	if not target then
 		job.index = job.index + 1
 		return
 	end
 
-	target.rounds = (target.rounds or 0) + 1
+	if into_gun then
+		wep:set_ammo_remaining_in_clip(wep:get_ammo_remaining_in_clip() + 1)
+		target.rounds = math.max(0, wep:get_ammo_remaining_in_clip() - chamber_of(wep))
+	else
+		target.rounds = (target.rounds or 0) + 1
+	end
 
 	set_loose(wep, loose_of(wep) - 1)
 	sync_total(wep)

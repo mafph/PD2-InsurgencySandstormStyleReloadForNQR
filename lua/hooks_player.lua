@@ -290,15 +290,22 @@ local function update_pickup(state, t, input)
 	end
 
 	if not cfg.pickup_t then
-		-- Erst Waffe wegstecken, der Balken startet erst, wenn sie ganz unten ist.
-		-- Ohne Waffe in der Hand (nichts ausgeruestet / bereits weggesteckt)
-		-- gibt es nichts wegzustecken.
-		-- Nur Primaer-/Sekundaerwaffen werden weggesteckt; Melee o.ae. nicht.
+		-- Schusswaffe erst wegstecken, der Balken startet erst, wenn sie ganz unten ist.
+		-- Ohne Waffe in der Hand oder mit Melee gibt es nichts wegzustecken.
+		-- Nur echte Schusswaffen (Primaer/Sekundaer) werden weggesteckt; Melee nicht.
 		local base = api.equipped_base()
 		local inv = pl and pl:inventory()
 		local sel = inv and inv.equipped_selection and inv:equipped_selection()
-		local is_gun = base ~= nil and (sel == 1 or sel == 2) and base.ammo_info ~= nil
+		local name_id = base and (base._name_id or (base.get_name_id and base:get_name_id()))
+		local melee_td = tweak_data and tweak_data.blackmarket and tweak_data.blackmarket.melee_weapons
+		local is_melee = (melee_td and name_id and melee_td[name_id] ~= nil)
+			or (base and base.get_ammo_remaining_in_clip == nil)
+			or (base and base._blueprint == nil)
+			or (state._is_meleeing and state:_is_meleeing())
+			or (sel ~= nil and sel ~= 1 and sel ~= 2)
+		local is_gun = base ~= nil and not is_melee
 		local in_hand = is_gun and state._unequip_weapon_expire_t == nil
+
 		local need_holster = cfg.holster == "pickup" or in_hand
 
 		if need_holster and (not holster_start(state, t, "pickup") or not holstered(state, t)) then return end
