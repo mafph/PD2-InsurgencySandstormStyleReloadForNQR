@@ -20,56 +20,65 @@ local function make_on_reload_hook(orig)
 
 		api.loose_of(self)
 
-		local drops = self._nqr_drop_count or 0
-
-		self._nqr_drop_count = 0
-
 		local chamber = api.chamber_of(self)
-		local clip = self:get_ammo_remaining_in_clip()
-		local kept = math.max(0, math.min(chamber, clip))
+		local kept = math.max(0, math.min(chamber, self:get_ammo_remaining_in_clip()))
 
-		dbg("reload: clip=" .. tostring(clip) .. " chamber=" .. tostring(chamber) .. " drops=" .. tostring(drops)
-			.. " loose=" .. tostring(api.loose_of(self)) .. " queue=" .. tostring(#queue))
+		if self._nqr_mags_staged then
+			-- Uebernahme schon in den NQR-Stufen (r_mag_out/r_get_new_mag_in) passiert.
+			self._nqr_mags_staged = nil
+		else
+			local drops = self._nqr_drop_count or 0
 
-		if drops < 1 then
-			local old_mag = self._nqr_mag_installed
-			local actual = math.max(0, clip - chamber)
+			self._nqr_drop_count = 0
 
-			if not old_mag then
-				old_mag = api.new_mag(actual)
-				dbg("reload: no installed mag recorded, created rounds=" .. tostring(actual))
-			else
-				-- .rounds wird nur beim Einsetzen/HUD aktualisiert: nach Schuessen ist der Wert veraltet.
-				if (old_mag.rounds or 0) ~= actual then
-					dbg("reload: stale mag rounds " .. tostring(old_mag.rounds) .. " -> " .. tostring(actual)
-						.. " (clip=" .. tostring(clip) .. " chamber=" .. tostring(chamber) .. ")")
+			local clip = self:get_ammo_remaining_in_clip()
+
+			dbg("reload: clip=" .. tostring(clip) .. " chamber=" .. tostring(chamber) .. " drops=" .. tostring(drops)
+				.. " loose=" .. tostring(api.loose_of(self)) .. " queue=" .. tostring(#queue))
+
+			if drops < 1 then
+				local old_mag = self._nqr_mag_installed
+				local actual = math.max(0, clip - chamber)
+
+				if not old_mag then
+					old_mag = api.new_mag(actual)
+					dbg("reload: no installed mag recorded, created rounds=" .. tostring(actual))
+				else
+					-- .rounds wird nur beim Einsetzen/HUD aktualisiert: nach Schuessen ist der Wert veraltet.
+					if (old_mag.rounds or 0) ~= actual then
+						dbg("reload: stale mag rounds " .. tostring(old_mag.rounds) .. " -> " .. tostring(actual)
+							.. " (clip=" .. tostring(clip) .. " chamber=" .. tostring(chamber) .. ")")
+					end
+
+					old_mag.rounds = actual
 				end
 
-				old_mag.rounds = actual
+				queue[#queue + 1] = old_mag
 			end
 
-			queue[#queue + 1] = old_mag
+			api.sort_queue(queue)
+
+			local next_mag = table.remove(queue, 1)
+
+			self._nqr_mag_installed = next_mag or api.new_mag(0)
 		end
 
-		api.sort_queue(queue)
+		self._nqr_mag_left_rounds = nil
 
-		local next_mag = table.remove(queue, 1)
-
-		self._nqr_mag_installed = next_mag or api.new_mag(0)
-
-		local total = (next_mag and next_mag.rounds or 0) + kept
+		local installed = self._nqr_mag_installed or api.new_mag(0)
+		local total = (installed.rounds or 0) + kept
 
 		self:set_ammo_total(total)
 
 		local ret = orig(self, ...)
 
-		self._nqr_mag_installed.rounds = math.max(0, self:get_ammo_remaining_in_clip() - chamber)
+		installed.rounds = math.max(0, self:get_ammo_remaining_in_clip() - chamber)
 
 		api.sync_total(self)
 
 		cfg.panel_dirty = true
 
-		dbg("loaded " .. tostring(self._nqr_mag_installed.rounds) .. "/" .. tostring(capacity + chamber)
+		dbg("loaded " .. tostring(installed.rounds) .. "/" .. tostring(capacity + chamber)
 			.. " chamber=" .. tostring(chamber) .. " queue=" .. tostring(#queue)
 			.. " loose=" .. tostring(api.loose_of(self)))
 
@@ -146,6 +155,39 @@ local function ensure_on_reload_hook()
 
 	cfg.on_reload_hook = make_on_reload_hook(cls.on_reload)
 	cls.on_reload = cfg.on_reload_hook
+end
+
+local function ensure_stage_hook()
+	local cls = rawget(_G, "NewRaycastWeaponBase")
+
+	if not cls or not cls.update_r_stage then return end
+	if cls.update_r_stage == cfg.stage_hook then return end
+
+	local orig = cls.update_r_stage
+
+	cfg.stage_hook = function(self, t)
+		local ret = orig(self, t)
+
+		if not cfg.enabled or api.skip_weapon(self) then return ret end
+
+		local cycle = self.r_cycle
+		local stage = self.r_stage
+		local name = cycle and stage and cycle[stage] or nil
+
+		if name ~= self._nqr_mags_stage then
+			self._nqr_mags_stage = name
+
+			if name == "r_mag_out" then
+				api.mag_left(self)
+			elseif name == "r_get_new_mag_in" then
+				api.mag_entered(self)
+			end
+		end
+
+		return ret
+	end
+
+	cls.update_r_stage = cfg.stage_hook
 end
 
 local function ensure_can_reload_hook()
@@ -289,6 +331,7 @@ end
 local function install_weapon_hooks()
 	ensure_can_reload_hook()
 	ensure_on_reload_hook()
+	ensure_stage_hook()
 	ensure_add_ammo_hook()
 	ensure_drop_hook()
 	ensure_bag_hooks()
@@ -296,6 +339,7 @@ local function install_weapon_hooks()
 end
 
 cfg.api.ensure_on_reload_hook = ensure_on_reload_hook
+cfg.api.ensure_stage_hook = ensure_stage_hook
 cfg.api.ensure_add_ammo_hook = ensure_add_ammo_hook
 cfg.api.ensure_drop_hook = ensure_drop_hook
 cfg.api.ensure_bag_hooks = ensure_bag_hooks
