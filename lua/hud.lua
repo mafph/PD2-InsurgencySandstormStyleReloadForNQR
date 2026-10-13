@@ -1,4 +1,4 @@
-local cfg = rawget(_G, "NQR_MAGS")
+local cfg = rawget(_G, "ISSR")
 local api = cfg.api
 
 local BOX_COLOR = Color(0.30, 0.30, 0.30, 0.9)
@@ -22,7 +22,7 @@ local function collect_rows()
 
 	api.sort_queue(queue)
 
-	local installed = wep._nqr_mag_installed or api.new_mag(0)
+	local installed = wep._issr_mag_installed or api.new_mag(0)
 
 	installed.rounds = math.max(0, wep:get_ammo_remaining_in_clip() - api.chamber_of(wep))
 
@@ -31,7 +31,7 @@ local function collect_rows()
 		caliber = caliber,
 		capacity = capacity,
 		installed = installed,
-		no_mag = wep._nqr_no_mag and true or false,
+		no_mag = wep._issr_no_mag and true or false,
 		loose = api.loose_of(wep)
 	}
 end
@@ -75,14 +75,14 @@ local function draw_header(panel, rows, row_w)
 	local parts = {}
 
 	if cfg.show_mags then
-		parts[#parts + 1] = api.L("nqr_mags_hud_mags", "MAGS") .. " " .. tostring(#rows.queue)
+		parts[#parts + 1] = api.L("issr_hud_mags", "MAGS") .. " " .. tostring(#rows.queue)
 	end
 
 	if cfg.show_loose then
-		parts[#parts + 1] = api.L("nqr_mags_hud_loose", "LOSE") .. " " .. tostring(rows.loose)
+		parts[#parts + 1] = api.L("issr_hud_loose", "LOSE") .. " " .. tostring(rows.loose)
 	end
 
-	add_text(panel, "nqr_mags_header", 2, 0, row_w - 4, cfg.font_size, cfg.font_size, table.concat(parts, "    "))
+	add_text(panel, "issr_header", 2, 0, row_w - 4, cfg.font_size, cfg.font_size, table.concat(parts, "    "))
 end
 
 local function draw_no_mag(panel, x, y)
@@ -109,13 +109,13 @@ local function draw_no_mag(panel, x, y)
 		end
 	end
 
-	dashes("nqr_mag_dash_t", x, y, BOX_W, true)
-	dashes("nqr_mag_dash_b", x, y + BOX_H - t, BOX_W, true)
-	dashes("nqr_mag_dash_l", x, y, BOX_H, false)
-	dashes("nqr_mag_dash_r", x + BOX_W - t, y, BOX_H, false)
+	dashes("issr_mag_dash_t", x, y, BOX_W, true)
+	dashes("issr_mag_dash_b", x, y + BOX_H - t, BOX_W, true)
+	dashes("issr_mag_dash_l", x, y, BOX_H, false)
+	dashes("issr_mag_dash_r", x + BOX_W - t, y, BOX_H, false)
 
 	panel:text({
-		name = "nqr_mag_x",
+		name = "issr_mag_x",
 		x = x,
 		y = y,
 		w = BOX_W,
@@ -134,7 +134,7 @@ local function draw_mag(panel, index, mag, x, y, capacity)
 	local ratio = math.max(0, math.min(1, (mag.rounds or 0) / math.max(1, capacity)))
 
 	panel:rect({
-		name = "nqr_mag_box_" .. index,
+		name = "issr_mag_box_" .. index,
 		x = x,
 		y = y,
 		w = BOX_W,
@@ -147,7 +147,7 @@ local function draw_mag(panel, index, mag, x, y, capacity)
 		local fh = math.max(2, (BOX_H - 4) * ratio)
 
 		panel:rect({
-			name = "nqr_mag_fill_" .. index,
+			name = "issr_mag_fill_" .. index,
 			x = x + 2,
 			y = y + BOX_H - 2 - fh,
 			w = BOX_W - 4,
@@ -163,9 +163,9 @@ local function draw_footer(panel, rows, first, row_w, y)
 
 	if cfg.show_mags then
 		if rows.no_mag then
-			text = api.L("nqr_mags_hud_no_mag", "KEIN MAG")
+			text = api.L("issr_hud_no_mag", "KEIN MAG")
 		else
-			text = api.L("nqr_mags_hud_next", "NEXT") .. " " .. tostring(first and first.rounds or 0) .. "/" .. tostring(rows.capacity)
+			text = api.L("issr_hud_next", "NEXT") .. " " .. tostring(first and first.rounds or 0) .. "/" .. tostring(rows.capacity)
 		end
 
 		if cfg.show_ammo_type then
@@ -175,7 +175,7 @@ local function draw_footer(panel, rows, first, row_w, y)
 		text = tostring(rows.caliber)
 	end
 
-	add_text(panel, "nqr_mags_footer", 2, y, row_w - 4, cfg.font_size, cfg.font_size, text)
+	add_text(panel, "issr_footer", 2, y, row_w - 4, cfg.font_size, cfg.font_size, text)
 end
 
 local function build_panel(rows)
@@ -197,7 +197,7 @@ local function build_panel(rows)
 	local foot_h = foot_on and (cfg.font_size + 2) or 0
 	local panel_h = head_h + BOX_H + 6 + foot_h
 	local panel = root:panel({
-		name = "nqr_mags_panel",
+		name = "issr_panel",
 		x = root:w() - row_w - cfg.pad_right,
 		y = root:h() - panel_h - cfg.pad_bottom,
 		w = row_w,
@@ -206,7 +206,7 @@ local function build_panel(rows)
 	})
 
 	panel:rect({
-		name = "nqr_mags_bg",
+		name = "issr_bg",
 		x = 0,
 		y = 0,
 		w = row_w,
@@ -224,7 +224,7 @@ local function build_panel(rows)
 
 		if i == 1 then
 			panel:rect({
-				name = "nqr_mag_line_1",
+				name = "issr_mag_line_1",
 				x = x,
 				y = head_h - 3,
 				w = BOX_W,
@@ -245,7 +245,7 @@ local function build_panel(rows)
 		local x = BOX_GAP + (shown - 1) * (BOX_W + BOX_GAP)
 
 		panel:text({
-			name = "nqr_mags_more",
+			name = "issr_more",
 			x = x,
 			y = head_h,
 			w = BOX_W,

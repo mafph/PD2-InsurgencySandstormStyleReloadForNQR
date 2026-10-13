@@ -1,9 +1,9 @@
 dofile(ModPath .. "lua/state.lua")
 
-local cfg = rawget(_G, "NQR_MAGS")
-local rcfg = rawget(_G, "NQR_MAGFILL")
+local cfg = rawget(_G, "ISSR")
+local rcfg = rawget(_G, "ISSR_RELOAD")
 
-local MAGS_MENU_ID = "nqr_mags_menu"
+local MAGS_MENU_ID = "issr_menu"
 local LOC_PATH = ModPath .. "loc/"
 
 local function file_exists(path)
@@ -17,7 +17,7 @@ local function file_exists(path)
 	return false
 end
 
-Hooks:Add("LocalizationManagerPostInit", "nqr_mags_loc_init", function(loc)
+Hooks:Add("LocalizationManagerPostInit", "issr_loc_init", function(loc)
 	local lang = BLT.Localization and BLT.Localization:get_language()
 	local code = (lang and lang.language) or (BLT.save_data and BLT.save_data.language) or "en"
 	local own = file_exists(LOC_PATH .. code .. ".txt")
@@ -40,7 +40,7 @@ local LAYOUT = {}
 
 for g = 1, #GROUPS do
 	if g > 1 then
-		LAYOUT[#LAYOUT + 1] = { divider = "nqr_mags_divider_" .. (g - 1) }
+		LAYOUT[#LAYOUT + 1] = { divider = "issr_divider_" .. (g - 1) }
 	end
 
 	for i = 1, #GROUPS[g].schema do
@@ -48,13 +48,13 @@ for g = 1, #GROUPS do
 	end
 end
 
-LAYOUT[#LAYOUT + 1] = { divider = "nqr_mags_divider_" .. #GROUPS }
+LAYOUT[#LAYOUT + 1] = { divider = "issr_divider_" .. #GROUPS }
 LAYOUT[#LAYOUT + 1] = {
 	button = {
-		id = "nqr_mags_reset",
-		title = "nqr_mags_reset_title",
-		desc = "nqr_mags_reset_desc",
-		callback = "nqr_mags_reset_callback"
+		id = "issr_reset",
+		title = "issr_reset_title",
+		desc = "issr_reset_desc",
+		callback = "issr_reset_callback"
 	}
 }
 
@@ -143,7 +143,7 @@ local function reset_all(item)
 	end
 end
 
-Hooks:Add("MenuManagerInitialize", "nqr_mags_menu_initialize", function()
+Hooks:Add("MenuManagerInitialize", "issr_menu_initialize", function()
 	for g = 1, #GROUPS do
 		local group = GROUPS[g]
 
@@ -152,22 +152,22 @@ Hooks:Add("MenuManagerInitialize", "nqr_mags_menu_initialize", function()
 		end
 	end
 
-	MenuCallbackHandler.nqr_mags_reset_callback = function(_, item)
+	MenuCallbackHandler.issr_reset_callback = function(_, item)
 		reset_all(item)
 	end
 end)
 
-Hooks:Add("MenuManagerSetupCustomMenus", "nqr_mags_menu_setup", function()
+Hooks:Add("MenuManagerSetupCustomMenus", "issr_menu_setup", function()
 	MenuHelper:NewMenu(MAGS_MENU_ID)
 end)
 
-Hooks:Add("MenuManagerPopulateCustomMenus", "nqr_mags_menu_populate", function()
+Hooks:Add("MenuManagerPopulateCustomMenus", "issr_menu_populate", function()
 	for i = 1, #LAYOUT do
 		add_layout_item(LAYOUT[i], #LAYOUT - i + 1)
 	end
 end)
 
-Hooks:Add("MenuManagerBuildCustomMenus", "nqr_mags_menu_build", function(_, nodes)
+Hooks:Add("MenuManagerBuildCustomMenus", "issr_menu_build", function(_, nodes)
 	local parent = nodes and (nodes.lua_mod_options_menu or nodes.blt_options or nodes.options)
 
 	if not parent then
@@ -175,5 +175,5 @@ Hooks:Add("MenuManagerBuildCustomMenus", "nqr_mags_menu_build", function(_, node
 	end
 
 	nodes[MAGS_MENU_ID] = MenuHelper:BuildMenu(MAGS_MENU_ID, { area_bg = "half" })
-	MenuHelper:AddMenuItem(parent, MAGS_MENU_ID, "nqr_mags_menu_title", "nqr_mags_menu_desc")
+	MenuHelper:AddMenuItem(parent, MAGS_MENU_ID, "issr_menu_title", "issr_menu_desc")
 end)

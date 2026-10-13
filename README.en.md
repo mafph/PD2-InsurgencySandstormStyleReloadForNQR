@@ -1,4 +1,4 @@
-# NQR Mags
+# InsurgencySandstormStyleReloadForNQR
 
 A Payday 2 mod that treats magazines as actual things. You no longer have "120 rounds in reserve", you have a handful of magazines that are all filled differently. It's built on top of NQR and won't run without it.
 
@@ -31,7 +31,7 @@ By default the panel is only there while you hold R. "Overlay always on" keeps i
 
 ## Settings
 
-All under the mod options, entry NQR Mags.
+All under the mod options, entry InsurgencySandstormStyleReloadForNQR.
 
 Magazines:
 
@@ -60,7 +60,7 @@ Refill:
 
 The button at the very bottom resets everything.
 
-Settings are saved to `nqr_mags_settings.txt` and `nqr_magfill_settings.txt` in BLT's save folder. If something goes wrong you can just delete them.
+Settings are saved to `issr_settings.txt` and `issr_reload_settings.txt` in BLT's save folder. If something goes wrong you can just delete them.
 
 ## What isn't affected
 
@@ -84,11 +84,11 @@ Put the folder in `mods/`. You need SuperBLT and NQR. In the `mod.txt` the files
 Texts live in `loc/<language>.txt`, English is the fallback. Missing HUD texts fall back to the built-in strings. If you want to translate them, you need these keys:
 
 ```
-nqr_mags_hud_mags
-nqr_mags_hud_loose
-nqr_mags_hud_next
-nqr_mags_hud_no_mag
-nqr_mags_pickup
+issr_hud_mags
+issr_hud_loose
+issr_hud_next
+issr_hud_no_mag
+issr_pickup
 ```
 
 ## Files
@@ -108,4 +108,4 @@ New setting? Add one line to the schema in `state.lua`, plus `<id>_title` and `<
 
 ## If something doesn't work
 
-Look for `[nqr_mags]` in the BLT log. If a part fails to load, it says which one and why. If another mod messes with the same reload functions, things can get rough. This mod only wraps its hooks once, but I can't promise anything.
+Look for `[issr]` in the BLT log. If a part fails to load, it says which one and why. If another mod messes with the same reload functions, things can get rough. This mod only wraps its hooks once, but I can't promise anything.

@@ -1,5 +1,5 @@
 {
-	"name" : "NQR Magazines",
+	"name" : "InsurgencySandstormStyleReloadForNQR",
 	"description" : "Magazine as tracked items. Hold [R] for the Sandstorm ammo panel: how many magazines you have, how full they are and which one loads next. Reloading loads the next magazine instead of topping up from a free reserve. Ammo pickups and bags fill loose rounds that refill your magazines one after another.",
 	"author" : "I AM GREEN",
 	"version" : "1.1.0",

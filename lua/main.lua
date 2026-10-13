@@ -10,7 +10,7 @@ if dir ~= "" and not dir:match("[/\\]$") then
 end
 
 local function report(name, err)
-	local out = "[nqr_mags] " .. name .. " failed: " .. tostring(err)
+	local out = "[issr] " .. name .. " failed: " .. tostring(err)
 
 	if _G.log then
 		_G.log(out)
@@ -29,7 +29,7 @@ local function load_part(name)
 	return ok
 end
 
-local cfg = rawget(_G, "NQR_MAGS")
+local cfg = rawget(_G, "ISSR")
 
 if not (cfg and cfg.api) then
 	if not load_part("state") then return end

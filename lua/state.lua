@@ -1,29 +1,29 @@
-local cfg = rawget(_G, "NQR_MAGS") or {}
-_G.NQR_MAGS = cfg
+local cfg = rawget(_G, "ISSR") or {}
+_G.ISSR = cfg
 
-local rcfg = rawget(_G, "NQR_MAGFILL") or {}
-_G.NQR_MAGFILL = rcfg
+local rcfg = rawget(_G, "ISSR_RELOAD") or {}
+_G.ISSR_RELOAD = rcfg
 
 local MAGS_SCHEMA = {
-	{ key = "enabled", id = "nqr_mags_enabled", type = "toggle", default = true },
-	{ key = "max_extra_mags", id = "nqr_mags_max_extra", type = "slider", default = 0, min = 0, max = 2, step = 1, precision = 0 },
-	{ key = "ammo_max", id = "nqr_mags_ammo_max", type = "slider", default = 125, min = 100, max = 200, step = 5, precision = 0, percent = true },
-	{ key = "overlay_always", id = "nqr_mags_overlay_always", type = "toggle", default = false },
-	{ key = "show_mags", id = "nqr_mags_counts", type = "toggle", default = false },
-	{ key = "show_loose", id = "nqr_mags_loose", type = "toggle", default = true },
-	{ key = "show_ammo_type", id = "nqr_mags_ammo_type", type = "toggle", default = false },
-	{ key = "max_boxes", id = "nqr_mags_max_boxes", type = "slider", default = 4, min = 2, max = 24, step = 1, precision = 0 },
-	{ key = "show_more", id = "nqr_mags_more", type = "toggle", default = true },
-	{ key = "font_size", id = "nqr_mags_font", type = "slider", default = 20, min = 10, max = 28, step = 1, precision = 0 },
-	{ key = "pad_right", id = "nqr_mags_pad_right", type = "slider", default = 220, min = -100, max = 300, step = 2, precision = 0 },
-	{ key = "pad_bottom", id = "nqr_mags_pad_bottom", type = "slider", default = 100, min = -50, max = 400, step = 2, precision = 0 }
+	{ key = "enabled", id = "issr_enabled", type = "toggle", default = true },
+	{ key = "max_extra_mags", id = "issr_max_extra", type = "slider", default = 0, min = 0, max = 2, step = 1, precision = 0 },
+	{ key = "ammo_max", id = "issr_ammo_max", type = "slider", default = 125, min = 100, max = 200, step = 5, precision = 0, percent = true },
+	{ key = "overlay_always", id = "issr_overlay_always", type = "toggle", default = false },
+	{ key = "show_mags", id = "issr_counts", type = "toggle", default = false },
+	{ key = "show_loose", id = "issr_loose", type = "toggle", default = true },
+	{ key = "show_ammo_type", id = "issr_ammo_type", type = "toggle", default = false },
+	{ key = "max_boxes", id = "issr_max_boxes", type = "slider", default = 4, min = 2, max = 24, step = 1, precision = 0 },
+	{ key = "show_more", id = "issr_more", type = "toggle", default = true },
+	{ key = "font_size", id = "issr_font", type = "slider", default = 20, min = 10, max = 28, step = 1, precision = 0 },
+	{ key = "pad_right", id = "issr_pad_right", type = "slider", default = 220, min = -100, max = 300, step = 2, precision = 0 },
+	{ key = "pad_bottom", id = "issr_pad_bottom", type = "slider", default = 100, min = -50, max = 400, step = 2, precision = 0 }
 }
 
 local FILL_SCHEMA = {
-	{ key = "enabled", id = "nqr_magfill_enabled", type = "toggle", default = true },
-	{ key = "round_interval", id = "nqr_magfill_interval", type = "slider", default = 0.25, min = 0.02, max = 1, step = 0.01, precision = 2 },
-	{ key = "sound", id = "nqr_magfill_sound", type = "toggle", default = true },
-	{ key = "unblock_bag", id = "nqr_magfill_unblock", type = "toggle", default = true }
+	{ key = "enabled", id = "issr_reload_enabled", type = "toggle", default = true },
+	{ key = "round_interval", id = "issr_reload_interval", type = "slider", default = 0.25, min = 0.02, max = 1, step = 0.01, precision = 2 },
+	{ key = "sound", id = "issr_reload_sound", type = "toggle", default = true },
+	{ key = "unblock_bag", id = "issr_reload_unblock", type = "toggle", default = true }
 }
 
 local function schema_keys(schema)
@@ -104,8 +104,8 @@ local function save_settings(target, name, keys)
 	end
 end
 
-load_settings(cfg, "nqr_mags_settings.txt", MAGS_SETTINGS_KEYS)
-load_settings(rcfg, "nqr_magfill_settings.txt", FILL_SETTINGS_KEYS)
+load_settings(cfg, "issr_settings.txt", MAGS_SETTINGS_KEYS)
+load_settings(rcfg, "issr_reload_settings.txt", FILL_SETTINGS_KEYS)
 
 local function apply_defaults(target, defaults)
 	for key, value in pairs(defaults) do
@@ -236,13 +236,13 @@ local function mag_part_id(wep)
 
 	if not blueprint then return nil end
 
-	if wep._nqr_pid_bp ~= blueprint or wep._nqr_pid_n ~= #blueprint then
-		wep._nqr_pid = find_mag_part(blueprint) or false
-		wep._nqr_pid_bp = blueprint
-		wep._nqr_pid_n = #blueprint
+	if wep._issr_pid_bp ~= blueprint or wep._issr_pid_n ~= #blueprint then
+		wep._issr_pid = find_mag_part(blueprint) or false
+		wep._issr_pid_bp = blueprint
+		wep._issr_pid_n = #blueprint
 	end
 
-	return wep._nqr_pid or nil
+	return wep._issr_pid or nil
 end
 
 local function mag_capacity(pid, caliber)
@@ -319,7 +319,7 @@ local function mag_amount_for(pid, caliber, name_id)
 	return 3
 end
 
-local function nqr_mag_amount(wep)
+local function issr_mag_amount(wep)
 	return mag_amount_for(mag_part_id(wep), wep._caliber, wep._name_id)
 end
 
@@ -336,7 +336,7 @@ local function queue_of(wep)
 		local capacity = mag_capacity(pid, caliber)
 
 		queue = {}
-		for _ = 1, nqr_mag_amount(wep) do
+		for _ = 1, issr_mag_amount(wep) do
 			queue[#queue + 1] = new_mag(capacity)
 		end
 
@@ -363,56 +363,56 @@ local function mag_left(wep)
 
 	local rounds = math.max(0, wep:get_ammo_remaining_in_clip() - chamber_of(wep))
 
-	wep._nqr_mag_left_rounds = rounds
-	wep._nqr_mag_installed = new_mag(0)
-	wep._nqr_drop_count = 0
-	wep._nqr_no_mag = true
+	wep._issr_mag_left_rounds = rounds
+	wep._issr_mag_installed = new_mag(0)
+	wep._issr_drop_count = 0
+	wep._issr_no_mag = true
 
 	cfg.panel_dirty = true
 end
 
 local function mag_entered(wep)
-	wep._nqr_no_mag = nil
+	wep._issr_no_mag = nil
 	cfg.panel_dirty = true
 end
 
 local function reload_interrupted(wep)
-	if not wep._nqr_mag_left_rounds and (wep._nqr_drop_count or 0) < 1 then return end
+	if not wep._issr_mag_left_rounds and (wep._issr_drop_count or 0) < 1 then return end
 
 	local queue = queue_of(wep)
-	local drops = wep._nqr_drop_count or 0
+	local drops = wep._issr_drop_count or 0
 
-	wep._nqr_drop_count = 0
-	wep._nqr_mag_left_rounds = nil
+	wep._issr_drop_count = 0
+	wep._issr_mag_left_rounds = nil
 
 	cfg.panel_dirty = true
 
 	if not queue then return end
 
 	if drops >= 1 then
-		wep._nqr_no_mag = true
-		wep._nqr_mag_gone = true
-		wep._nqr_mag_installed = new_mag(0)
+		wep._issr_no_mag = true
+		wep._issr_mag_gone = true
+		wep._issr_mag_installed = new_mag(0)
 	else
-		wep._nqr_mag_installed = new_mag(math.max(0, wep:get_ammo_remaining_in_clip() - chamber_of(wep)))
-		wep._nqr_no_mag = nil
-		wep._nqr_mag_gone = nil
+		wep._issr_mag_installed = new_mag(math.max(0, wep:get_ammo_remaining_in_clip() - chamber_of(wep)))
+		wep._issr_no_mag = nil
+		wep._issr_mag_gone = nil
 	end
 end
 
 local sync_total
 
 local function loose_of(wep)
-	if wep._nqr_mag_loose == nil then
-		wep._nqr_mag_loose = 0
+	if wep._issr_mag_loose == nil then
+		wep._issr_mag_loose = 0
 		sync_total(wep)
 	end
 
-	return wep._nqr_mag_loose
+	return wep._issr_mag_loose
 end
 
 local function set_loose(wep, value)
-	wep._nqr_mag_loose = math.max(0, math.floor(value or 0))
+	wep._issr_mag_loose = math.max(0, math.floor(value or 0))
 end
 
 local function queue_rounds(wep)
@@ -439,7 +439,7 @@ local function max_total(wep)
 	if not pid or not caliber then return nil end
 
 	local capacity = mag_capacity(pid, caliber)
-	local base = capacity + chamber_of(wep) + nqr_mag_amount(wep) * capacity
+	local base = capacity + chamber_of(wep) + issr_mag_amount(wep) * capacity
 
 	return math.floor(base * math.max(1, cfg.ammo_max / 100))
 end
@@ -487,7 +487,7 @@ local function can_pickup_dropped(tag)
 	local cap = dropped_cap(tag)
 	local wep = equipped_base()
 
-	if wep and wep._nqr_mag_gone and queue_of(wep) == queue then
+	if wep and wep._issr_mag_gone and queue_of(wep) == queue then
 		cap = cap + 1
 	end
 
@@ -543,7 +543,7 @@ local function add_to_job(wep)
 end
 
 local function installed_room(wep, capacity)
-	if wep._nqr_no_mag or wep._nqr_mag_gone then return 0 end
+	if wep._issr_no_mag or wep._issr_mag_gone then return 0 end
 
 	local rounds = math.max(0, wep:get_ammo_remaining_in_clip() - chamber_of(wep))
 
@@ -564,7 +564,7 @@ local function fill_mags(wep, amount)
 
 	local max_mags = mag_amount_for(pid, caliber, wep._name_id) + extra_mags()
 
-	if wep._nqr_mag_gone then max_mags = max_mags + 1 end
+	if wep._issr_mag_gone then max_mags = max_mags + 1 end
 
 	while amount > 0 and #queue < max_mags do
 		local take = math.min(amount, capacity)
@@ -576,11 +576,11 @@ local function fill_mags(wep, amount)
 	local take = math.min(amount, installed_room(wep, capacity))
 
 	if take > 0 then
-		local installed = wep._nqr_mag_installed or new_mag(0)
+		local installed = wep._issr_mag_installed or new_mag(0)
 
 		wep:set_ammo_remaining_in_clip(wep:get_ammo_remaining_in_clip() + take)
 		installed.rounds = math.max(0, wep:get_ammo_remaining_in_clip() - chamber_of(wep))
-		wep._nqr_mag_installed = installed
+		wep._issr_mag_installed = installed
 		amount = amount - take
 	end
 
@@ -627,8 +627,8 @@ local function fill_one_round()
 
 	if not target and installed_room(wep, capacity) > 0 then
 		into_gun = true
-		target = wep._nqr_mag_installed or new_mag(0)
-		wep._nqr_mag_installed = target
+		target = wep._issr_mag_installed or new_mag(0)
+		wep._issr_mag_installed = target
 	end
 
 	if not target then
@@ -707,7 +707,7 @@ local function magazines_need_fill(player)
 			local queue, _, _, _, capacity = queue_of(wep)
 
 			if queue and capacity then
-				if wep._nqr_mag_installed and (wep._nqr_mag_installed.rounds or 0) < capacity then
+				if wep._issr_mag_installed and (wep._issr_mag_installed.rounds or 0) < capacity then
 					return true
 				end
 
@@ -748,7 +748,7 @@ cfg.api.fill_mags = fill_mags
 cfg.api.tick = tick
 cfg.api.magazines_need_fill = magazines_need_fill
 cfg.api.needs_fill = needs_fill
-cfg.api.save = function() save_settings(cfg, "nqr_mags_settings.txt", MAGS_SETTINGS_KEYS) end
+cfg.api.save = function() save_settings(cfg, "issr_settings.txt", MAGS_SETTINGS_KEYS) end
 cfg.api.defaults = MAGS_DEFAULTS
 cfg.api.schema = MAGS_SCHEMA
 cfg.api.wrap = wrap
@@ -757,6 +757,6 @@ cfg.api.L = L
 
 rcfg.api = rcfg.api or {}
 
-rcfg.api.save = function() save_settings(rcfg, "nqr_magfill_settings.txt", FILL_SETTINGS_KEYS) end
+rcfg.api.save = function() save_settings(rcfg, "issr_reload_settings.txt", FILL_SETTINGS_KEYS) end
 rcfg.api.defaults = FILL_DEFAULTS
 rcfg.api.schema = FILL_SCHEMA

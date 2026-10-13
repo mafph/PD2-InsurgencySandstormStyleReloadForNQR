@@ -1,9 +1,9 @@
-if not GameSetup or rawget(_G, "NQR_MAGS_DAY_RESET") then return end
+if not GameSetup or rawget(_G, "ISSR_DAY_RESET") then return end
 
-_G.NQR_MAGS_DAY_RESET = true
+_G.ISSR_DAY_RESET = true
 
-Hooks:PostHook(GameSetup, "init_finalize", "NQR_MAGS_day_reset", function()
-	local c = rawget(_G, "NQR_MAGS")
+Hooks:PostHook(GameSetup, "init_finalize", "ISSR_day_reset", function()
+	local c = rawget(_G, "ISSR")
 
 	if not c then return end
 

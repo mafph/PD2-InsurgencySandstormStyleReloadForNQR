@@ -1,55 +1,55 @@
 {
-	"nqr_mags_menu_title" : "NQR Magazines",
-	"nqr_mags_menu_desc" : "弹匣与装填设置",
+	"issr_menu_title" : "InsurgencySandstormStyleReloadForNQR",
+	"issr_menu_desc" : "弹匣与装填设置",
 
-	"nqr_mags_enabled_title" : "启用",
-	"nqr_mags_enabled_desc" : "将弹匣作为可追踪物品，带 Sandstorm 风格 HUD。",
+	"issr_enabled_title" : "启用",
+	"issr_enabled_desc" : "将弹匣作为可追踪物品，带 Sandstorm 风格 HUD。",
 
-	"nqr_mags_max_extra_title" : "额外弹匣",
-	"nqr_mags_max_extra_desc" : "在 NQR 弹匣数量之外额外充满的弹匣数（0-2）。",
+	"issr_max_extra_title" : "额外弹匣",
+	"issr_max_extra_desc" : "在 NQR 弹匣数量之外额外充满的弹匣数（0-2）。",
 
-	"nqr_mags_ammo_max_title" : "最大弹药",
-	"nqr_mags_ammo_max_desc" : "最大弹药量，为初始量的百分比（100-200%）。",
+	"issr_ammo_max_title" : "最大弹药",
+	"issr_ammo_max_desc" : "最大弹药量，为初始量的百分比（100-200%）。",
 
-	"nqr_mags_overlay_always_title" : "始终显示弹匣面板",
-	"nqr_mags_overlay_always_desc" : "持续显示弹匣面板，而不是仅在按住换弹键时显示。",
+	"issr_overlay_always_title" : "始终显示弹匣面板",
+	"issr_overlay_always_desc" : "持续显示弹匣面板，而不是仅在按住换弹键时显示。",
 
-	"nqr_mags_counts_title" : "显示弹匣数",
-	"nqr_mags_counts_desc" : "在顶部显示你拥有的弹匣数量。",
+	"issr_counts_title" : "显示弹匣数",
+	"issr_counts_desc" : "在顶部显示你拥有的弹匣数量。",
 
-	"nqr_mags_loose_title" : "显示散装弹药",
-	"nqr_mags_loose_desc" : "在顶部显示散落的子弹。",
+	"issr_loose_title" : "显示散装弹药",
+	"issr_loose_desc" : "在顶部显示散落的子弹。",
 
-	"nqr_mags_ammo_type_title" : "显示弹药类型",
-	"nqr_mags_ammo_type_desc" : "在弹药数旁显示口径。",
+	"issr_ammo_type_title" : "显示弹药类型",
+	"issr_ammo_type_desc" : "在弹药数旁显示口径。",
 
-	"nqr_mags_max_boxes_title" : "最大格数",
-	"nqr_mags_max_boxes_desc" : "HUD 中显示的弹匣数量。",
+	"issr_max_boxes_title" : "最大格数",
+	"issr_max_boxes_desc" : "HUD 中显示的弹匣数量。",
 
-	"nqr_mags_more_title" : "用 + 显示更多弹匣",
-	"nqr_mags_more_desc" : "在最后一格中以 +N 显示隐藏的剩余弹匣。",
+	"issr_more_title" : "用 + 显示更多弹匣",
+	"issr_more_desc" : "在最后一格中以 +N 显示隐藏的剩余弹匣。",
 
-	"nqr_mags_font_title" : "字号",
-	"nqr_mags_font_desc" : "HUD 字体大小。",
+	"issr_font_title" : "字号",
+	"issr_font_desc" : "HUD 字体大小。",
 
-	"nqr_mags_pad_right_title" : "右边距",
-	"nqr_mags_pad_right_desc" : "HUD 距离屏幕右边缘的距离。",
+	"issr_pad_right_title" : "右边距",
+	"issr_pad_right_desc" : "HUD 距离屏幕右边缘的距离。",
 
-	"nqr_mags_pad_bottom_title" : "下边距",
-	"nqr_mags_pad_bottom_desc" : "HUD 距离屏幕下边缘的距离。",
+	"issr_pad_bottom_title" : "下边距",
+	"issr_pad_bottom_desc" : "HUD 距离屏幕下边缘的距离。",
 
-	"nqr_magfill_enabled_title" : "装填已启用",
-	"nqr_magfill_enabled_desc" : "弹药包补充散落子弹，弹药会逐个装满弹匣。",
+	"issr_reload_enabled_title" : "装填已启用",
+	"issr_reload_enabled_desc" : "弹药包补充散落子弹，弹药会逐个装满弹匣。",
 
-	"nqr_magfill_interval_title" : "每发子弹秒数",
-	"nqr_magfill_interval_desc" : "两发装入弹匣的子弹之间的停顿。仅在武器收起时生效。",
+	"issr_reload_interval_title" : "每发子弹秒数",
+	"issr_reload_interval_desc" : "两发装入弹匣的子弹之间的停顿。仅在武器收起时生效。",
 
-	"nqr_magfill_sound_title" : "音效",
-	"nqr_magfill_sound_desc" : "弹匣装满时播放音效。",
+	"issr_reload_sound_title" : "音效",
+	"issr_reload_sound_desc" : "弹匣装满时播放音效。",
 
-	"nqr_magfill_unblock_title" : "夹子满时弹药包仍可用",
-	"nqr_magfill_unblock_desc" : "当仅需补充弹匣时，弹药包依然可用。",
+	"issr_reload_unblock_title" : "夹子满时弹药包仍可用",
+	"issr_reload_unblock_desc" : "当仅需补充弹匣时，弹药包依然可用。",
 
-	"nqr_mags_reset_title" : "重置",
-	"nqr_mags_reset_desc" : "将所有设置重置为默认值。"
+	"issr_reset_title" : "重置",
+	"issr_reset_desc" : "将所有设置重置为默认值。"
 }

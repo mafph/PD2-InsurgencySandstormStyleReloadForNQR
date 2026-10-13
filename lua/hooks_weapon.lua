@@ -1,5 +1,5 @@
-local cfg = rawget(_G, "NQR_MAGS")
-local rcfg = rawget(_G, "NQR_MAGFILL")
+local cfg = rawget(_G, "ISSR")
+local rcfg = rawget(_G, "ISSR_RELOAD")
 local api = cfg.api
 
 local function make_on_reload_hook(orig)
@@ -19,18 +19,18 @@ local function make_on_reload_hook(orig)
 		local chamber = api.chamber_of(self)
 		local kept = math.max(0, math.min(chamber, self:get_ammo_remaining_in_clip()))
 
-		local drops = self._nqr_drop_count or 0
+		local drops = self._issr_drop_count or 0
 		local clip = self:get_ammo_remaining_in_clip()
 
-		self._nqr_drop_count = 0
+		self._issr_drop_count = 0
 
-		local gone = self._nqr_mag_gone
+		local gone = self._issr_mag_gone
 
-		self._nqr_mag_gone = nil
+		self._issr_mag_gone = nil
 
 		if drops < 1 and not gone then
-			local old_mag = self._nqr_mag_installed
-			local actual = self._nqr_mag_left_rounds
+			local old_mag = self._issr_mag_installed
+			local actual = self._issr_mag_left_rounds
 
 			if actual == nil then
 				actual = math.max(0, clip - chamber)
@@ -45,16 +45,16 @@ local function make_on_reload_hook(orig)
 			queue[#queue + 1] = old_mag
 		end
 
-		self._nqr_mag_left_rounds = nil
+		self._issr_mag_left_rounds = nil
 
 		api.sort_queue(queue)
 
 		local next_mag = table.remove(queue, 1)
 
-		self._nqr_mag_installed = next_mag or api.new_mag(0)
-		self._nqr_no_mag = nil
+		self._issr_mag_installed = next_mag or api.new_mag(0)
+		self._issr_no_mag = nil
 
-		local installed = self._nqr_mag_installed
+		local installed = self._issr_mag_installed
 		local total = (installed.rounds or 0) + kept
 
 		self:set_ammo_total(total)
@@ -106,7 +106,7 @@ local function make_drop_hook(orig)
 							name_id = self._name_id
 						}
 
-						self._nqr_drop_count = (self._nqr_drop_count or 0) + 1
+						self._issr_drop_count = (self._issr_drop_count or 0) + 1
 
 						cfg.panel_dirty = true
 					end
@@ -130,8 +130,8 @@ local function make_stage_hook(orig)
 		local stage = self.r_stage
 		local name = cycle and stage and cycle[stage] or nil
 
-		if name ~= self._nqr_mags_stage then
-			self._nqr_mags_stage = name
+		if name ~= self._issr_stage then
+			self._issr_stage = name
 
 			if name == "r_mag_out" then
 				api.mag_left(self)

@@ -1,55 +1,55 @@
 {
-	"nqr_mags_menu_title" : "NQR Magazines",
-	"nqr_mags_menu_desc" : "Настройки магазинов и пополнения",
+	"issr_menu_title" : "InsurgencySandstormStyleReloadForNQR",
+	"issr_menu_desc" : "Настройки магазинов и пополнения",
 
-	"nqr_mags_enabled_title" : "Включено",
-	"nqr_mags_enabled_desc" : "Магазины как отслеживаемые объекты с HUD в стиле Sandstorm.",
+	"issr_enabled_title" : "Включено",
+	"issr_enabled_desc" : "Магазины как отслеживаемые объекты с HUD в стиле Sandstorm.",
 
-	"nqr_mags_max_extra_title" : "Дополнительные магазины",
-	"nqr_mags_max_extra_desc" : "Сколько магазинов сверх количества NQR заполняется (0-2).",
+	"issr_max_extra_title" : "Дополнительные магазины",
+	"issr_max_extra_desc" : "Сколько магазинов сверх количества NQR заполняется (0-2).",
 
-	"nqr_mags_ammo_max_title" : "Максимум боеприпасов",
-	"nqr_mags_ammo_max_desc" : "Максимум боеприпасов как процент от начального количества (100-200%).",
+	"issr_ammo_max_title" : "Максимум боеприпасов",
+	"issr_ammo_max_desc" : "Максимум боеприпасов как процент от начального количества (100-200%).",
 
-	"nqr_mags_overlay_always_title" : "Оверлей всегда открыт",
-	"nqr_mags_overlay_always_desc" : "Постоянно показывает панель магазинов, а не только при удержании перезарядки.",
+	"issr_overlay_always_title" : "Оверлей всегда открыт",
+	"issr_overlay_always_desc" : "Постоянно показывает панель магазинов, а не только при удержании перезарядки.",
 
-	"nqr_mags_counts_title" : "Показывать число магазинов",
-	"nqr_mags_counts_desc" : "Показывает, сколько у вас магазинов, в заголовке.",
+	"issr_counts_title" : "Показывать число магазинов",
+	"issr_counts_desc" : "Показывает, сколько у вас магазинов, в заголовке.",
 
-	"nqr_mags_loose_title" : "Показывать россыпь патронов",
-	"nqr_mags_loose_desc" : "Показывает свободные патроны в заголовке.",
+	"issr_loose_title" : "Показывать россыпь патронов",
+	"issr_loose_desc" : "Показывает свободные патроны в заголовке.",
 
-	"nqr_mags_ammo_type_title" : "Показывать тип боеприпасов",
-	"nqr_mags_ammo_type_desc" : "Показывает калибр рядом со счётчиком патронов.",
+	"issr_ammo_type_title" : "Показывать тип боеприпасов",
+	"issr_ammo_type_desc" : "Показывает калибр рядом со счётчиком патронов.",
 
-	"nqr_mags_max_boxes_title" : "Максимум ячеек",
-	"nqr_mags_max_boxes_desc" : "Сколько магазинов показывается в HUD.",
+	"issr_max_boxes_title" : "Максимум ячеек",
+	"issr_max_boxes_desc" : "Сколько магазинов показывается в HUD.",
 
-	"nqr_mags_more_title" : "Показывать лишние магазины знаком +",
-	"nqr_mags_more_desc" : "Показывает скрытые оставшиеся магазины как +N в последней ячейке.",
+	"issr_more_title" : "Показывать лишние магазины знаком +",
+	"issr_more_desc" : "Показывает скрытые оставшиеся магазины как +N в последней ячейке.",
 
-	"nqr_mags_font_title" : "Размер шрифта",
-	"nqr_mags_font_desc" : "Размер шрифта HUD.",
+	"issr_font_title" : "Размер шрифта",
+	"issr_font_desc" : "Размер шрифта HUD.",
 
-	"nqr_mags_pad_right_title" : "Отступ справа",
-	"nqr_mags_pad_right_desc" : "Расстояние HUD от правого края экрана.",
+	"issr_pad_right_title" : "Отступ справа",
+	"issr_pad_right_desc" : "Расстояние HUD от правого края экрана.",
 
-	"nqr_mags_pad_bottom_title" : "Отступ снизу",
-	"nqr_mags_pad_bottom_desc" : "Расстояние HUD от нижнего края экрана.",
+	"issr_pad_bottom_title" : "Отступ снизу",
+	"issr_pad_bottom_desc" : "Расстояние HUD от нижнего края экрана.",
 
-	"nqr_magfill_enabled_title" : "Пополнение включено",
-	"nqr_magfill_enabled_desc" : "Сумка с патронами наполняет свободные патроны, которые по одному пополняют магазины.",
+	"issr_reload_enabled_title" : "Пополнение включено",
+	"issr_reload_enabled_desc" : "Сумка с патронами наполняет свободные патроны, которые по одному пополняют магазины.",
 
-	"nqr_magfill_interval_title" : "Секунд на патрон",
-	"nqr_magfill_interval_desc" : "Пауза между двумя патронами, заряжаемыми в магазин. Только когда оружие убрано.",
+	"issr_reload_interval_title" : "Секунд на патрон",
+	"issr_reload_interval_desc" : "Пауза между двумя патронами, заряжаемыми в магазин. Только когда оружие убрано.",
 
-	"nqr_magfill_sound_title" : "Звук",
-	"nqr_magfill_sound_desc" : "Звук, когда магазин заполнен.",
+	"issr_reload_sound_title" : "Звук",
+	"issr_reload_sound_desc" : "Звук, когда магазин заполнен.",
 
-	"nqr_magfill_unblock_title" : "Сумка доступна, даже если магазин полон",
-	"nqr_magfill_unblock_desc" : "Сумка с патронами остаётся доступной, когда пополнить нужно только магазины.",
+	"issr_reload_unblock_title" : "Сумка доступна, даже если магазин полон",
+	"issr_reload_unblock_desc" : "Сумка с патронами остаётся доступной, когда пополнить нужно только магазины.",
 
-	"nqr_mags_reset_title" : "Сброс",
-	"nqr_mags_reset_desc" : "Сбрасывает все настройки к значениям по умолчанию."
+	"issr_reset_title" : "Сброс",
+	"issr_reset_desc" : "Сбрасывает все настройки к значениям по умолчанию."
 }

@@ -1,5 +1,5 @@
-local cfg = rawget(_G, "NQR_MAGS")
-local rcfg = rawget(_G, "NQR_MAGFILL")
+local cfg = rawget(_G, "ISSR")
+local rcfg = rawget(_G, "ISSR_RELOAD")
 local api = cfg.api
 
 local function reload_held(state)
@@ -53,7 +53,7 @@ end
 local function make_reload_hook(orig)
 	return function(self, t, input)
 		if not cfg.enabled then
-			self._nqr_hold_t = nil
+			self._issr_hold_t = nil
 			holster_release("refill")
 
 			if cfg.panel_visible then
@@ -68,12 +68,12 @@ local function make_reload_hook(orig)
 		local applicable = wep and not api.skip_weapon(wep)
 
 		if held and applicable then
-			if not self._nqr_hold_t then
-				self._nqr_hold_t = t + tap_hold_time()
+			if not self._issr_hold_t then
+				self._issr_hold_t = t + tap_hold_time()
 			end
 
-			if t >= self._nqr_hold_t then
-				self._nqr_held_long = true
+			if t >= self._issr_hold_t then
+				self._issr_held_long = true
 
 				api.set_panel(true)
 
@@ -93,10 +93,10 @@ local function make_reload_hook(orig)
 
 		holster_release("refill")
 
-		local tap = self._nqr_hold_t ~= nil and not self._nqr_held_long
+		local tap = self._issr_hold_t ~= nil and not self._issr_held_long
 
-		self._nqr_hold_t = nil
-		self._nqr_held_long = nil
+		self._issr_hold_t = nil
+		self._issr_held_long = nil
 
 		if cfg.panel_visible and not cfg.overlay_always then
 			api.set_panel(false)
@@ -303,7 +303,7 @@ local function update_pickup(state, t)
 
 		pcall(function()
 			managers.hud:show_interact({
-				text = managers.localization:btn_macro("interact", false) .. " " .. api.L("nqr_mags_pickup", "Magazin aufheben")
+				text = managers.localization:btn_macro("interact", false) .. " " .. api.L("issr_pickup", "Magazin aufheben")
 			})
 		end)
 	end
@@ -358,7 +358,7 @@ local function update_pickup(state, t)
 end
 
 local function prepare_weapon(base)
-	if base._nqr_mag_loose == nil then
+	if base._issr_mag_loose == nil then
 		api.loose_of(base)
 		api.refresh_hud()
 	end
